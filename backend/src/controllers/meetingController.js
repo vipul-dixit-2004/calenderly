@@ -1,6 +1,7 @@
 import { db } from '../db/index.js';
 import { meetings, eventTypes, users } from '../db/schema.js';
 import { eq, and, gt, lte, or, inArray, desc } from 'drizzle-orm';
+import * as mailService from '../services/mail/index.js';
 
 export const list = async (req, res, next) => {
   try {
@@ -96,5 +97,29 @@ export const cancel = async (req, res, next) => {
       .returning();
 
     res.json(updated);
+
+    // Queue cancellation email
+    const [meetingDetail] = await db.select({
+      inviteeEmail: meetings.inviteeEmail,
+      inviteeName:  meetings.inviteeName,
+      startTime:    meetings.startTime,
+      eventTitle:   eventTypes.title,
+    }).from(meetings)
+      .innerJoin(eventTypes, eq(eventTypes.id, meetings.eventTypeId))
+      .where(eq(meetings.id, req.params.id));
+
+    if (meetingDetail) {
+      mailService.send({
+        to: meetingDetail.inviteeEmail,
+        subject: `Meeting Cancelled: ${meetingDetail.eventTitle}`,
+        template: 'booking-cancelled',
+        data: {
+          inviteeName:  meetingDetail.inviteeName,
+          eventTitle:   meetingDetail.eventTitle,
+          startTime:    meetingDetail.startTime,
+          cancelReason: cancelReason || null,
+        },
+      }).catch(err => console.error('Failed to queue cancellation email:', err));
+    }
   } catch (err) { next(err); }
 };

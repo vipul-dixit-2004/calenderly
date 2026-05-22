@@ -4,6 +4,7 @@ import {
   availabilityRules, availabilityOverrides, meetings,
 } from '../db/schema.js';
 import { eq, and, lt, gt, sql } from 'drizzle-orm';
+import * as mailService from '../services/mail/index.js';
 
 export const getEventBySlug = async (req, res, next) => {
   try {
@@ -182,5 +183,20 @@ export const createBooking = async (req, res, next) => {
       .returning();
 
     res.status(201).json({ meeting, eventType });
+
+    // Fire-and-forget: queue confirmation email
+    mailService.send({
+      to: inviteeEmail,
+      subject: `Meeting Confirmed: ${eventType.title}`,
+      template: 'booking-confirmation',
+      data: {
+        inviteeName,
+        hostName: owner.name,
+        eventTitle: eventType.title,
+        startTime: meeting.startTime,
+        endTime: meeting.endTime,
+        duration: eventType.duration,
+      },
+    }).catch(err => console.error('Failed to queue confirmation email:', err));
   } catch (err) { next(err); }
 };

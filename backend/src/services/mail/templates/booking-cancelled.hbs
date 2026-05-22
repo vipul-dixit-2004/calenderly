@@ -1,0 +1,9 @@
+<h2>Meeting Cancelled</h2>
+<p>Hi <strong>{{inviteeName}}</strong>,</p>
+<p>Your meeting <strong>{{eventTitle}}</strong> on <strong>{{formatDate startTime}}</strong> has been cancelled.</p>
+
+{{#if cancelReason}}
+<p><strong>Reason:</strong> {{cancelReason}}</p>
+{{/if}}
+
+<p>You can schedule a new meeting anytime.</p>

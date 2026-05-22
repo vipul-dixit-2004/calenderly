@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import { verifyTransport } from './services/mail/index.js';
 
 import userRoutes from './routes/users.js';
 import errorHandler from './middleware/errorHandler.js';
@@ -23,4 +24,7 @@ app.use('/api/meetings', meetingRoutes);
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, async () => {
+  console.log(`Server running on port ${PORT}`);
+  await verifyTransport();
+});
