@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Link from 'next/link';
 
 interface Meeting {
   id: string;
@@ -62,9 +63,14 @@ export default function MeetingCard({ meeting, onCancel }: Props) {
             {meeting.status}
           </span>
           {meeting.status === 'scheduled' && (
-            <button className="btn btn-secondary btn-sm" onClick={() => setShowCancel(true)}>
-              Cancel
-            </button>
+            <>
+              <Link href={`/reschedule/${meeting.id}`} className="btn btn-secondary btn-sm" style={{ textDecoration: 'none' }}>
+                Reschedule
+              </Link>
+              <button className="btn btn-secondary btn-sm" onClick={() => setShowCancel(true)}>
+                Cancel
+              </button>
+            </>
           )}
         </div>
       </div>

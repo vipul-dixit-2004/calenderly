@@ -56,3 +56,7 @@ export const getSlots = (username: string, slug: string, date: string) =>
   apiFetch(`/bookings/${username}/${slug}/slots?date=${date}`);
 export const createBooking = (username: string, slug: string, body: Record<string, unknown>) =>
   apiFetch(`/bookings/${username}/${slug}`, { method: 'POST', body: JSON.stringify(body) });
+export const getMeetingForReschedule = (id: string) =>
+  apiFetch(`/bookings/reschedule/${id}`);
+export const rescheduleBooking = (id: string, body: Record<string, unknown>) =>
+  apiFetch(`/bookings/reschedule/${id}`, { method: 'PATCH', body: JSON.stringify(body) });

@@ -2,6 +2,8 @@ import { Router } from 'express';
 import * as ctrl from '../controllers/bookingController.js';
 
 const router = Router();
+router.get('/reschedule/:meetingId', ctrl.getMeetingForReschedule);
+router.patch('/reschedule/:meetingId', ctrl.rescheduleBooking);
 router.get('/:username',             ctrl.getPublicEventTypes);
 router.get('/:username/:slug',       ctrl.getEventBySlug);
 router.get('/:username/:slug/slots', ctrl.getAvailableSlots);

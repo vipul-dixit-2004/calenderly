@@ -244,7 +244,138 @@ export const createBooking = async (req, res, next) => {
         meetUrl: meeting.meetUrl,
         meetAddress: meeting.meetAddress,
         meetPhone: meeting.meetPhone,
+        meetingId: meeting.id,
+        appUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
       },
     }).catch(err => console.error('Failed to queue confirmation email:', err));
+  } catch (err) { next(err); }
+};
+
+export const getMeetingForReschedule = async (req, res, next) => {
+  try {
+    const { meetingId } = req.params;
+
+    const [row] = await db
+      .select({
+        meeting: meetings,
+        eventType: eventTypes,
+        host: {
+          name: users.name,
+          username: users.username,
+          timezone: users.timezone,
+        }
+      })
+      .from(meetings)
+      .innerJoin(eventTypes, eq(eventTypes.id, meetings.eventTypeId))
+      .innerJoin(users, eq(users.id, eventTypes.userId))
+      .where(eq(meetings.id, meetingId));
+
+    if (!row) return res.status(404).json({ error: 'Meeting not found' });
+    if (row.meeting.status !== 'scheduled') {
+      return res.status(400).json({ error: 'Only scheduled meetings can be rescheduled' });
+    }
+
+    res.json({
+      ...row.meeting,
+      eventTitle: row.eventType.title,
+      duration: row.eventType.duration,
+      color: row.eventType.color,
+      meetType: row.eventType.meetType,
+      slug: row.eventType.slug,
+      hostName: row.host.name,
+      hostUsername: row.host.username,
+      hostTimezone: row.host.timezone,
+    });
+  } catch (err) { next(err); }
+};
+
+export const rescheduleBooking = async (req, res, next) => {
+  try {
+    const { meetingId } = req.params;
+    const { startTime, reason } = req.body;
+
+    const [row] = await db
+      .select({
+        meeting: meetings,
+        eventType: eventTypes,
+        host: {
+          name: users.name,
+          email: users.email,
+        }
+      })
+      .from(meetings)
+      .innerJoin(eventTypes, eq(eventTypes.id, meetings.eventTypeId))
+      .innerJoin(users, eq(users.id, eventTypes.userId))
+      .where(eq(meetings.id, meetingId));
+
+    if (!row) return res.status(404).json({ error: 'Meeting not found' });
+    if (row.meeting.status !== 'scheduled') {
+      return res.status(400).json({ error: 'Only scheduled meetings can be rescheduled' });
+    }
+
+    const startDt = new Date(startTime);
+    const endDt = new Date(startDt.getTime() + row.eventType.duration * 60000);
+
+    // Double-booking check: overlapping interval query
+    const conflicts = await db
+      .select({ id: meetings.id })
+      .from(meetings)
+      .where(and(
+        eq(meetings.eventTypeId, row.eventType.id),
+        eq(meetings.status,      'scheduled'),
+        lt(meetings.startTime,   endDt),
+        gt(meetings.endTime,     startDt),
+      ));
+    
+    // Make sure we don't conflict with ourselves (though if we are just moving, the old one is us)
+    const trueConflicts = conflicts.filter(c => c.id !== meetingId);
+    if (trueConflicts.length > 0) {
+      return res.status(409).json({ error: 'Time slot is already booked' });
+    }
+
+    const oldStartTime = row.meeting.startTime;
+    
+    // Append the reschedule reason to the cancel reason for record-keeping if provided
+    let newCancelReason = row.meeting.cancelReason;
+    if (reason) {
+      const entry = `Rescheduled to ${startDt.toISOString()}. Reason: ${reason}`;
+      newCancelReason = newCancelReason ? `${newCancelReason}\n${entry}` : entry;
+    }
+
+    const [updatedMeeting] = await db
+      .update(meetings)
+      .set({
+        startTime: startDt,
+        endTime: endDt,
+        cancelReason: newCancelReason,
+      })
+      .where(eq(meetings.id, meetingId))
+      .returning();
+
+    res.json({ meeting: updatedMeeting });
+
+    // Queue reschedule email
+    mailService.send({
+      to: row.meeting.inviteeEmail, // Send to invitee
+      subject: `Meeting Rescheduled: ${row.eventType.title}`,
+      template: 'booking-rescheduled',
+      data: {
+        inviteeName: row.meeting.inviteeName,
+        hostName: row.host.name,
+        eventTitle: row.eventType.title,
+        oldStartTime: oldStartTime,
+        newStartTime: updatedMeeting.startTime,
+        duration: row.eventType.duration,
+        meetType: row.eventType.meetType,
+        meetUrl: updatedMeeting.meetUrl,
+        meetAddress: updatedMeeting.meetAddress,
+        meetPhone: updatedMeeting.meetPhone,
+        reason: reason || 'No reason provided',
+        hostEmail: row.host.email,
+        meetingId: updatedMeeting.id,
+        appUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
+      },
+    }).catch(err => console.error('Failed to queue reschedule email:', err));
+
   } catch (err) { next(err); }
 };
