@@ -21,19 +21,28 @@ export default function Header() {
   return (
     <header className="app-header">
       <div className="header-left">
-        <h1 className="header-title">Dashboard</h1>
+        {/* Breadcrumb or left actions can go here */}
       </div>
-      {user && (
-        <div className="header-right">
-          <div className="header-avatar">
-            {user.name.charAt(0).toUpperCase()}
-          </div>
-          <div className="header-user-info">
-            <span className="header-user-name">{user.name}</span>
-            <span className="header-user-tz">{user.timezone}</span>
-          </div>
-        </div>
-      )}
+      <div className="header-right">
+        {/* Notification / person icon */}
+        <button className="header-icon-btn" aria-label="Profile">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+          </svg>
+        </button>
+
+        {user && (
+          <button className="header-user-btn" aria-label="User menu">
+            <div className="header-avatar">
+              {user.name.charAt(0).toUpperCase()}
+            </div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+        )}
+      </div>
     </header>
   );
 }

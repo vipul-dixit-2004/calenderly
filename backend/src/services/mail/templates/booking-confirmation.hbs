@@ -7,7 +7,24 @@
   <tr><td style="padding:8px 0;color:#666">Date</td><td style="padding:8px 0;font-weight:600">{{formatDate startTime}}</td></tr>
   <tr><td style="padding:8px 0;color:#666">Time</td><td style="padding:8px 0;font-weight:600">{{formatTime startTime}} – {{formatTime endTime}}</td></tr>
   <tr><td style="padding:8px 0;color:#666">Duration</td><td style="padding:8px 0;font-weight:600">{{duration}} min</td></tr>
+  {{#if meetUrl}}
+  <tr><td style="padding:8px 0;color:#666">Join via</td><td style="padding:8px 0;font-weight:600"><a href="{{meetUrl}}" style="color:#0069ff;text-decoration:none">Google Meet</a></td></tr>
+  {{/if}}
+  {{#if meetAddress}}
+  <tr><td style="padding:8px 0;color:#666">Location</td><td style="padding:8px 0;font-weight:600">{{meetAddress}}</td></tr>
+  {{/if}}
+  {{#if meetPhone}}
+  <tr><td style="padding:8px 0;color:#666">Phone</td><td style="padding:8px 0;font-weight:600">{{meetPhone}}</td></tr>
+  {{/if}}
 </table>
+
+{{#if meetUrl}}
+<div style="text-align:center;margin:24px 0">
+  <a href="{{meetUrl}}" style="display:inline-block;padding:12px 28px;background:#0069ff;color:#fff;text-decoration:none;border-radius:6px;font-weight:600;font-size:16px">
+    Join Google Meet
+  </a>
+</div>
+{{/if}}
 
 <p style="margin-top:20px;border-top:1px solid #eee;padding-top:20px;font-size:14px;color:#666">
   Need to make changes? <a href="{{appUrl}}/reschedule/{{meetingId}}" style="color:#0069ff;text-decoration:none;font-weight:600">Reschedule</a> or cancel your meeting.

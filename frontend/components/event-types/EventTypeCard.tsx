@@ -22,92 +22,162 @@ interface Props {
   onEdit: (id: string) => void;
 }
 
+function getMeetLabel(meetType: string) {
+  if (meetType === 'google_meet') return 'Google Meet';
+  if (meetType === 'phone') return 'Phone Call';
+  if (meetType === 'offline') return 'In-Person';
+  return meetType;
+}
+
+function getMeetTypeLabel(meetType: string) {
+  if (meetType === 'google_meet') return 'Group';
+  return '1-on-1';
+}
+
 export default function EventTypeCard({ event, username, onToggle, onDelete, onEdit }: Props) {
   const [copied, setCopied] = useState(false);
-  const bookingUrl = `${window.location.origin}/${username}/${event.slug}`;
+  const [menuOpen, setMenuOpen] = useState(false);
+  const bookingUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/${username}/${event.slug}`;
 
-  const handleCopy = async () => {
+  const handleCopy = async (e: React.MouseEvent) => {
+    e.stopPropagation();
     await navigator.clipboard.writeText(bookingUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
-  return (
-    <div className="event-card" style={{ '--card-color': event.color } as React.CSSProperties}>
-      <style>{`.event-card::before { background: var(--card-color); }`}</style>
+  const handleShare = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    window.open(bookingUrl, '_blank');
+  };
 
-      <div className="event-card-header">
-        <div>
-          <h3 className="event-card-title">{event.title}</h3>
-          <div className="event-card-duration">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+  return (
+    <div className={`event-list-item ${!event.isActive ? 'event-list-item--inactive' : ''}`}>
+      {/* Color accent bar */}
+      <div className="event-list-accent" style={{ backgroundColor: event.color }} />
+
+      {/* Checkbox area */}
+      <div className="event-list-check">
+        <input
+          type="checkbox"
+          className="event-checkbox"
+          checked={event.isActive}
+          onChange={() => onToggle(event.id)}
+          id={`toggle-${event.id}`}
+        />
+      </div>
+
+      {/* Main content */}
+      <div className="event-list-body">
+        <div className="event-list-title-row">
+          <h3 className="event-list-title">{event.title}</h3>
+        </div>
+        <div className="event-list-meta">
+          <span className="event-meta-chip">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
             </svg>
             {event.duration} min
-          </div>
+          </span>
+          <span className="event-meta-sep">•</span>
+          <span className="event-meta-chip">
+            {getMeetLabel(event.meetType)}
+          </span>
+          <span className="event-meta-sep">•</span>
+          <span className="event-meta-chip">
+            {getMeetTypeLabel(event.meetType)}
+          </span>
         </div>
-        <span className={`event-card-status ${event.isActive ? 'status-active' : 'status-inactive'}`}>
-          {event.isActive ? 'Active' : 'Inactive'}
-        </span>
+        {event.description && (
+          <p className="event-list-desc">{event.description}</p>
+        )}
+        <div className="event-list-days">
+          Mon, Tue, Wed, Thu, Fri, Sat, hours vary
+        </div>
       </div>
 
-      {/* Meet type badge */}
-      <div className="event-card-meet-type">
-        {event.meetType === 'google_meet' && (
-          <span className="meet-badge meet-badge--google">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M15 10l4.553-2.069A1 1 0 0 1 21 8.845v6.311a1 1 0 0 1-1.447.894L15 14M3 8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8z" />
-            </svg>
-            Google Meet
-            {event.meetUrl && <span style={{ marginLeft: 4, opacity: 0.7, fontSize: 10 }}>· {event.meetUrl}</span>}
-          </span>
-        )}
-        {event.meetType === 'phone' && (
-          <span className="meet-badge meet-badge--phone">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.38 2 2 0 0 1 3.6 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.37a16 16 0 0 0 6 6l.54-.54a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21 16.92z" />
-            </svg>
-            Phone Call
-          </span>
-        )}
-        {event.meetType === 'offline' && (
-          <span className="meet-badge meet-badge--offline">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-              <circle cx="12" cy="10" r="3" />
-            </svg>
-            In-Person
-          </span>
-        )}
-      </div>
-
-      {event.description && (
-        <p className="event-card-description">{event.description}</p>
-      )}
-
-      <div className="event-card-link" onClick={handleCopy}>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-        </svg>
-        <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {bookingUrl}
-        </span>
-        <span style={{ fontSize: 12, fontWeight: 600, flexShrink: 0 }}>
-          {copied ? '✓ Copied' : 'Copy'}
-        </span>
-      </div>
-
-      <div className="event-card-actions">
-        <button className="btn btn-secondary btn-sm" onClick={() => onEdit(event.id)}>
-          ✏️ Edit
+      {/* Actions */}
+      <div className="event-list-actions">
+        <button
+          className="event-action-btn event-action-copy"
+          onClick={handleCopy}
+          title="Copy link"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+          </svg>
+          <span>{copied ? '✓ Copied' : 'Copy link'}</span>
         </button>
-        <button className="btn btn-ghost btn-sm" onClick={() => onToggle(event.id)}>
-          {event.isActive ? '⏸ Disable' : '▶ Enable'}
+
+        <button
+          className="event-action-btn event-action-icon"
+          onClick={handleShare}
+          title="Open booking page"
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+            <polyline points="15 3 21 3 21 9"/>
+            <line x1="10" y1="14" x2="21" y2="3"/>
+          </svg>
         </button>
-        <button className="btn btn-danger btn-sm" onClick={() => onDelete(event.id)}>
-          🗑 Delete
-        </button>
+
+        {/* More menu */}
+        <div className="event-more-menu" style={{ position: 'relative' }}>
+          <button
+            className="event-action-btn event-action-icon"
+            onClick={(e) => { e.stopPropagation(); setMenuOpen(!menuOpen); }}
+            title="More options"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="5" r="1" fill="currentColor"/>
+              <circle cx="12" cy="12" r="1" fill="currentColor"/>
+              <circle cx="12" cy="19" r="1" fill="currentColor"/>
+            </svg>
+          </button>
+
+          {menuOpen && (
+            <>
+              <div className="event-menu-backdrop" onClick={() => setMenuOpen(false)} />
+              <div className="event-menu-dropdown">
+                <button className="event-menu-item" onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onEdit(event.id); }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                  </svg>
+                  Edit
+                </button>
+                <button className="event-menu-item" onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onToggle(event.id); }}>
+                  {event.isActive ? (
+                    <>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>
+                      </svg>
+                      Disable
+                    </>
+                  ) : (
+                    <>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polygon points="5 3 19 12 5 21 5 3"/>
+                      </svg>
+                      Enable
+                    </>
+                  )}
+                </button>
+                <div className="event-menu-divider" />
+                <button className="event-menu-item event-menu-item--danger" onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onDelete(event.id); }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                    <path d="M10 11v6"/><path d="M14 11v6"/>
+                    <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                  </svg>
+                  Delete
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -5,6 +5,7 @@ import {
 } from '../db/schema.js';
 import { eq, and, lt, gt } from 'drizzle-orm';
 import * as mailService from '../services/mail/index.js';
+import { meetQueue } from '../services/meetQueue.js';
 
 // GET /bookings/:username — public profile: user info + all active event types
 export const getPublicEventTypes = async (req, res, next) => {
@@ -207,11 +208,6 @@ export const createBooking = async (req, res, next) => {
     if (conflicts.length > 0)
       return res.status(409).json({ error: 'Time slot is already booked' });
 
-    let meetUrl = null;
-    if (eventType.meetType === 'google_meet') {
-      meetUrl = eventType.meetUrl || `https://meet.google.com/${Math.random().toString(36).substring(2, 11)}`;
-    }
-
     const [meeting] = await db
       .insert(meetings)
       .values({
@@ -220,7 +216,7 @@ export const createBooking = async (req, res, next) => {
         inviteeEmail,
         startTime:    startDt,
         endTime:      endDt,
-        meetUrl,
+        meetUrl:      null, // will be populated async for google_meet
         meetAddress:  eventType.meetType === 'offline' ? meetAddress : null,
         meetPhone:    eventType.meetType === 'phone' ? meetPhone : null,
       })
@@ -228,8 +224,8 @@ export const createBooking = async (req, res, next) => {
 
     res.status(201).json({ meeting, eventType });
 
-    // Fire-and-forget: queue confirmation email
-    mailService.send({
+    // Build the common email payload
+    const emailPayload = {
       to: inviteeEmail,
       subject: `Meeting Confirmed: ${eventType.title}`,
       template: 'booking-confirmation',
@@ -241,13 +237,32 @@ export const createBooking = async (req, res, next) => {
         endTime: meeting.endTime,
         duration: eventType.duration,
         meetType: eventType.meetType,
-        meetUrl: meeting.meetUrl,
+        meetUrl: null,
         meetAddress: meeting.meetAddress,
         meetPhone: meeting.meetPhone,
         meetingId: meeting.id,
         appUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
       },
-    }).catch(err => console.error('Failed to queue confirmation email:', err));
+    };
+
+    if (eventType.meetType === 'google_meet') {
+      // Async: generate Meet link → update DB → send email
+      meetQueue.add({
+        meetingId: meeting.id,
+        summary: `${eventType.title} — ${inviteeName} & ${owner.name}`,
+        description: eventType.description || '',
+        startTime: meeting.startTime,
+        endTime: meeting.endTime,
+        attendeeEmail: inviteeEmail,
+        emailPayload,
+        hostEmail: owner.email,
+        hostName: owner.name,
+      });
+    } else {
+      // Non-Meet bookings: send email immediately
+      mailService.send(emailPayload)
+        .catch(err => console.error('Failed to queue confirmation email:', err));
+    }
   } catch (err) { next(err); }
 };
 
@@ -354,9 +369,9 @@ export const rescheduleBooking = async (req, res, next) => {
 
     res.json({ meeting: updatedMeeting });
 
-    // Queue reschedule email
-    mailService.send({
-      to: row.meeting.inviteeEmail, // Send to invitee
+    // Build reschedule email payload
+    const rescheduleEmailPayload = {
+      to: row.meeting.inviteeEmail,
       subject: `Meeting Rescheduled: ${row.eventType.title}`,
       template: 'booking-rescheduled',
       data: {
@@ -375,7 +390,25 @@ export const rescheduleBooking = async (req, res, next) => {
         meetingId: updatedMeeting.id,
         appUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
       },
-    }).catch(err => console.error('Failed to queue reschedule email:', err));
+    };
+
+    if (row.eventType.meetType === 'google_meet') {
+      // Async: regenerate Meet link for the new time → update DB → send email
+      meetQueue.add({
+        meetingId: updatedMeeting.id,
+        summary: `${row.eventType.title} — ${row.meeting.inviteeName} & ${row.host.name}`,
+        description: row.eventType.description || '',
+        startTime: updatedMeeting.startTime,
+        endTime: updatedMeeting.endTime,
+        attendeeEmail: row.meeting.inviteeEmail,
+        emailPayload: rescheduleEmailPayload,
+        hostEmail: row.host.email,
+        hostName: row.host.name,
+      });
+    } else {
+      mailService.send(rescheduleEmailPayload)
+        .catch(err => console.error('Failed to queue reschedule email:', err));
+    }
 
   } catch (err) { next(err); }
 };
