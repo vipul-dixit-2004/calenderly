@@ -24,6 +24,8 @@ export const eventTypes = pgTable('event_types', {
     slug: varchar('slug', { length: 150 }).notNull(),
     duration: integer('duration').notNull(),               // minutes
     description: text('description'),
+    meetType: varchar('meet_type', { length: 50 }).notNull().default('google_meet'), // 'google_meet', 'offline', 'phone'
+    meetUrl: text('meet_url'),  // optional pre-set Google Meet room URL
     color: varchar('color', { length: 20 }).default('#0069ff'),
     isActive: boolean('is_active').notNull().default(true),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -52,7 +54,7 @@ export const availabilityRules = pgTable('availability_rules', {
     startTime: time('start_time').notNull(),
     endTime: time('end_time').notNull(),
 }, (t) => ({
-    scheduleDayUnique: uniqueIndex('uq_availability_rules_schedule_day').on(t.scheduleId, t.dayOfWeek),
+    scheduleDayIdx: index('idx_availability_rules_schedule_day').on(t.scheduleId, t.dayOfWeek),
 }));
 
 
@@ -75,6 +77,9 @@ export const meetings = pgTable('meetings', {
     inviteeEmail: varchar('invitee_email', { length: 255 }).notNull(),
     startTime: timestamp('start_time', { withTimezone: true }).notNull(),
     endTime: timestamp('end_time', { withTimezone: true }).notNull(),
+    meetUrl: text('meet_url'),
+    meetAddress: text('meet_address'),
+    meetPhone: varchar('meet_phone', { length: 50 }),
     status: varchar('status', { length: 20 }).notNull().default('scheduled'),
     cancelReason: text('cancel_reason'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

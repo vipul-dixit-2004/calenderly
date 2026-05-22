@@ -8,6 +8,27 @@
       "when": 1779423594240,
       "tag": "0000_fast_screwball",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1779451959134,
+      "tag": "0001_nappy_maggott",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1779452793138,
+      "tag": "0002_brainy_blue_marvel",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1779453703874,
+      "tag": "0003_chunky_meteorite",
+      "breakpoints": true
     }
   ]
 }

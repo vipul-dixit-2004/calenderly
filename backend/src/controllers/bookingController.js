@@ -3,8 +3,43 @@ import {
   users, eventTypes, availabilitySchedules,
   availabilityRules, availabilityOverrides, meetings,
 } from '../db/schema.js';
-import { eq, and, lt, gt, sql } from 'drizzle-orm';
+import { eq, and, lt, gt } from 'drizzle-orm';
 import * as mailService from '../services/mail/index.js';
+
+// GET /bookings/:username — public profile: user info + all active event types
+export const getPublicEventTypes = async (req, res, next) => {
+  try {
+    const { username } = req.params;
+    const [owner] = await db.select().from(users).where(eq(users.username, username));
+    if (!owner) return res.status(404).json({ error: 'User not found' });
+
+    const events = await db
+      .select({
+        id:          eventTypes.id,
+        title:       eventTypes.title,
+        slug:        eventTypes.slug,
+        duration:    eventTypes.duration,
+        description: eventTypes.description,
+        meetType:    eventTypes.meetType,
+        color:       eventTypes.color,
+      })
+      .from(eventTypes)
+      .where(and(
+        eq(eventTypes.userId,   owner.id),
+        eq(eventTypes.isActive, true),
+      ))
+      .orderBy(eventTypes.createdAt);
+
+    res.json({
+      user: {
+        name:     owner.name,
+        username: owner.username,
+        timezone: owner.timezone,
+      },
+      eventTypes: events,
+    });
+  } catch (err) { next(err); }
+};
 
 export const getEventBySlug = async (req, res, next) => {
   try {
@@ -23,6 +58,7 @@ export const getEventBySlug = async (req, res, next) => {
         slug:         eventTypes.slug,
         duration:     eventTypes.duration,
         description:  eventTypes.description,
+        meetType:     eventTypes.meetType,
         color:        eventTypes.color,
         hostName:     users.name,
         hostTimezone: users.timezone,
@@ -81,36 +117,36 @@ export const getAvailableSlots = async (req, res, next) => {
       ));
     if (override?.isUnavailable) return res.json([]);
 
-    // 4. Determine availability window
-    let windowStart, windowEnd;
+    // 4. Determine availability windows (supports multiple time slots per day)
+    let windows = [];
     if (override && !override.isUnavailable) {
-      windowStart = override.startTime;
-      windowEnd   = override.endTime;
+      windows = [{ start: override.startTime, end: override.endTime }];
     } else {
       const dayOfWeek = new Date(date + 'T12:00:00').getDay(); // 0=Sun
-      const [rule] = await db
+      const dayRules = await db
         .select()
         .from(availabilityRules)
         .where(and(
           eq(availabilityRules.scheduleId, schedule.id),
           eq(availabilityRules.dayOfWeek,  dayOfWeek),
         ));
-      if (!rule) return res.json([]);
-      windowStart = rule.startTime;
-      windowEnd   = rule.endTime;
+      if (dayRules.length === 0) return res.json([]);
+      windows = dayRules.map(r => ({ start: r.startTime, end: r.endTime }));
     }
 
-    // 5. Generate candidate slots
-    const [sh, sm] = windowStart.split(':').map(Number);
-    const [eh, em] = windowEnd.split(':').map(Number);
-    const slots    = [];
-    let current    = sh * 60 + sm;
-    const end      = eh * 60 + em;
-    while (current + eventType.duration <= end) {
-      const hh = String(Math.floor(current / 60)).padStart(2, '0');
-      const mm = String(current % 60).padStart(2, '0');
-      slots.push(new Date(`${date}T${hh}:${mm}:00.000Z`));
-      current += eventType.duration;
+    // 5. Generate candidate slots from all availability windows
+    const slots = [];
+    for (const w of windows) {
+      const [sh, sm] = w.start.split(':').map(Number);
+      const [eh, em] = w.end.split(':').map(Number);
+      let current = sh * 60 + sm;
+      const end   = eh * 60 + em;
+      while (current + eventType.duration <= end) {
+        const hh = String(Math.floor(current / 60)).padStart(2, '0');
+        const mm = String(current % 60).padStart(2, '0');
+        slots.push(new Date(`${date}T${hh}:${mm}:00.000Z`));
+        current += eventType.duration;
+      }
     }
 
     // 6. Fetch booked slots for that day
@@ -138,7 +174,7 @@ export const getAvailableSlots = async (req, res, next) => {
 export const createBooking = async (req, res, next) => {
   try {
     const { username, slug } = req.params;
-    const { inviteeName, inviteeEmail, startTime } = req.body;
+    const { inviteeName, inviteeEmail, startTime, meetAddress, meetPhone } = req.body;
 
     // Fetch user by username
     const [owner] = await db.select().from(users).where(eq(users.username, username));
@@ -171,6 +207,11 @@ export const createBooking = async (req, res, next) => {
     if (conflicts.length > 0)
       return res.status(409).json({ error: 'Time slot is already booked' });
 
+    let meetUrl = null;
+    if (eventType.meetType === 'google_meet') {
+      meetUrl = eventType.meetUrl || `https://meet.google.com/${Math.random().toString(36).substring(2, 11)}`;
+    }
+
     const [meeting] = await db
       .insert(meetings)
       .values({
@@ -179,6 +220,9 @@ export const createBooking = async (req, res, next) => {
         inviteeEmail,
         startTime:    startDt,
         endTime:      endDt,
+        meetUrl,
+        meetAddress:  eventType.meetType === 'offline' ? meetAddress : null,
+        meetPhone:    eventType.meetType === 'phone' ? meetPhone : null,
       })
       .returning();
 
@@ -196,6 +240,10 @@ export const createBooking = async (req, res, next) => {
         startTime: meeting.startTime,
         endTime: meeting.endTime,
         duration: eventType.duration,
+        meetType: eventType.meetType,
+        meetUrl: meeting.meetUrl,
+        meetAddress: meeting.meetAddress,
+        meetPhone: meeting.meetPhone,
       },
     }).catch(err => console.error('Failed to queue confirmation email:', err));
   } catch (err) { next(err); }

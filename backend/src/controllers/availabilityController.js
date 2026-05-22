@@ -42,23 +42,22 @@ export const upsertRules = async (req, res, next) => {
 
     const { rules } = req.body; // [{ dayOfWeek, startTime, endTime }]
 
-    const updated = await db.transaction(async (tx) => {
-      await tx
-        .delete(availabilityRules)
-        .where(eq(availabilityRules.scheduleId, schedule.id));
+    // Delete existing rules then insert new ones (no transaction — neon-http doesn't support them)
+    await db
+      .delete(availabilityRules)
+      .where(eq(availabilityRules.scheduleId, schedule.id));
 
-      if (rules.length === 0) return [];
+    if (rules.length === 0) return res.json([]);
 
-      return tx
-        .insert(availabilityRules)
-        .values(rules.map(r => ({
-          scheduleId: schedule.id,
-          dayOfWeek:  r.dayOfWeek,
-          startTime:  r.startTime,
-          endTime:    r.endTime,
-        })))
-        .returning();
-    });
+    const updated = await db
+      .insert(availabilityRules)
+      .values(rules.map(r => ({
+        scheduleId: schedule.id,
+        dayOfWeek:  r.dayOfWeek,
+        startTime:  r.startTime,
+        endTime:    r.endTime,
+      })))
+      .returning();
 
     res.json(updated);
   } catch (err) { next(err); }

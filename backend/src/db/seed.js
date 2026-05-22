@@ -21,15 +21,15 @@ async function seed() {
     const insertedEventTypes = await db.insert(eventTypes).values([
         {
             userId: user.id, title: '15-Minute Quick Chat', slug: 'quick-chat', duration: 15,
-            description: 'A quick intro or check-in.', color: '#0069ff'
+            description: 'A quick intro or check-in.', meetType: 'google_meet', color: '#0069ff'
         },
         {
             userId: user.id, title: '30-Minute Meeting', slug: '30-min', duration: 30,
-            description: 'Standard 30-minute discussion.', color: '#7c3aed'
+            description: 'Standard 30-minute discussion.', meetType: 'phone', color: '#7c3aed'
         },
         {
             userId: user.id, title: '60-Minute Deep Dive', slug: '60-min', duration: 60,
-            description: 'In-depth strategy or review session.', color: '#059669'
+            description: 'In-depth strategy or review session.', meetType: 'offline', color: '#059669'
         },
     ]).returning();
 
@@ -59,6 +59,7 @@ async function seed() {
             inviteeEmail: 'sarah@example.com',
             startTime: new Date(now.getTime() + 2 * 86400000),
             endTime: new Date(now.getTime() + 2 * 86400000 + 15 * 60000),
+            meetUrl: 'https://meet.google.com/abc-defg-hij',
             status: 'scheduled',
         },
         {
@@ -67,14 +68,16 @@ async function seed() {
             inviteeEmail: 'tom@example.com',
             startTime: new Date(now.getTime() + 3 * 86400000),
             endTime: new Date(now.getTime() + 3 * 86400000 + 30 * 60000),
+            meetPhone: '+1234567890',
             status: 'scheduled',
         },
         {
-            eventTypeId: insertedEventTypes[1].id,
+            eventTypeId: insertedEventTypes[2].id,
             inviteeName: 'Past Booking',
             inviteeEmail: 'past@example.com',
             startTime: new Date(now.getTime() - 5 * 86400000),
-            endTime: new Date(now.getTime() - 5 * 86400000 + 30 * 60000),
+            endTime: new Date(now.getTime() - 5 * 86400000 + 60 * 60000),
+            meetAddress: '123 Coffee Shop, NY',
             status: 'completed',
         },
     ]);

@@ -17,10 +17,10 @@ export const list = async (req, res, next) => {
 export const create = async (req, res, next) => {
     try {
         const userId = req.headers['x-user-id'];
-        const { title, slug, duration, description, color } = req.body;
+        const { title, slug, duration, description, color, meetType, meetUrl } = req.body;
         const [row] = await db
             .insert(eventTypes)
-            .values({ userId, title, slug, duration, description, color })
+            .values({ userId, title, slug, duration, description, color, meetType, meetUrl })
             .returning();
         res.status(201).json(row);
     } catch (err) { next(err); }
@@ -44,10 +44,10 @@ export const getOne = async (req, res, next) => {
 export const update = async (req, res, next) => {
     try {
         const userId = req.headers['x-user-id'];
-        const { title, slug, duration, description, color } = req.body;
+        const { title, slug, duration, description, color, meetType, meetUrl } = req.body;
         const [row] = await db
             .update(eventTypes)
-            .set({ title, slug, duration, description, color, updatedAt: new Date() })
+            .set({ title, slug, duration, description, color, meetType, meetUrl, updatedAt: new Date() })
             .where(and(
                 eq(eventTypes.id, req.params.id),
                 eq(eventTypes.userId, userId),
