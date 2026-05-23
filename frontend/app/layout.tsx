@@ -20,7 +20,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Calenderly — Scheduling Made Simple",
+  title: "Calenderly - Scheduling Made Simple",
   description: "A clean, lightweight Calendly-style scheduling platform.",
 };
 

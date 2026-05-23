@@ -7,6 +7,7 @@ interface Props {
   selectedSlot: string | null;
   onSelect: (slot: string) => void;
   duration: number;
+  userTimezone: string;
 }
 
 export default function TimeSlots({
@@ -16,6 +17,7 @@ export default function TimeSlots({
   selectedSlot,
   onSelect,
   duration,
+  userTimezone,
 }: Props) {
   if (!date) {
     return (
@@ -37,6 +39,7 @@ export default function TimeSlots({
     weekday: 'long',
     month: 'long',
     day: 'numeric',
+    timeZone: userTimezone,
   });
 
   return (
@@ -61,12 +64,14 @@ export default function TimeSlots({
               hour: 'numeric',
               minute: '2-digit',
               hour12: true,
+              timeZone: userTimezone,
             });
             const endT = new Date(t.getTime() + duration * 60000);
             const endLabel = endT.toLocaleTimeString('en-US', {
               hour: 'numeric',
               minute: '2-digit',
               hour12: true,
+              timeZone: userTimezone,
             });
             const selected = selectedSlot === slot;
 

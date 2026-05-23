@@ -9,6 +9,26 @@ import TimeSlots from '@/components/booking/TimeSlots';
 import RescheduleForm from '@/components/booking/RescheduleForm';
 import Link from 'next/link';
 
+const TIMEZONES = [
+  'UTC',
+  'America/New_York',
+  'America/Chicago',
+  'America/Denver',
+  'America/Los_Angeles',
+  'America/Sao_Paulo',
+  'Europe/London',
+  'Europe/Paris',
+  'Europe/Berlin',
+  'Europe/Moscow',
+  'Asia/Dubai',
+  'Asia/Kolkata',
+  'Asia/Singapore',
+  'Asia/Tokyo',
+  'Asia/Shanghai',
+  'Australia/Sydney',
+  'Pacific/Auckland',
+];
+
 interface MeetingRescheduleInfo {
   id: string;
   startTime: string;
@@ -46,6 +66,16 @@ export default function ReschedulePage() {
 
   const { showToast } = useToast();
   const [submitting, setSubmitting] = useState(false);
+
+  const [userTimezone, setUserTimezone] = useState<string>('UTC');
+
+  useEffect(() => {
+    try {
+      setUserTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone);
+    } catch {
+      setUserTimezone('UTC');
+    }
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -140,7 +170,7 @@ export default function ReschedulePage() {
           <h2>Rescheduled Successfully!</h2>
           <p style={{ marginBottom: 20 }}>
             Your meeting with {meetingInfo.hostName} has been rescheduled to{' '}
-            <strong>{formatDateLong(selectedDate!)}</strong> at <strong>{formatTime(selectedSlot!)}</strong>.
+            <strong>{formatDateLong(selectedDate!, userTimezone)}</strong> at <strong>{formatTime(selectedSlot!, userTimezone)}</strong>.
           </p>
           <p style={{ marginBottom: 24, fontSize: 13 }}>
             A calendar invitation has been updated and sent to your email address.
@@ -188,8 +218,8 @@ export default function ReschedulePage() {
                 <strong>Former Time</strong>
               </p>
               <p style={{ fontSize: 14, color: 'var(--color-text)', textDecoration: 'line-through' }}>
-                {formatDateLong(meetingInfo.startTime.split('T')[0])} <br/>
-                {formatTime(meetingInfo.startTime)}
+                {formatDateLong(meetingInfo.startTime.split('T')[0], userTimezone)} <br/>
+                {formatTime(meetingInfo.startTime, userTimezone)}
               </p>
             </div>
 
@@ -202,7 +232,7 @@ export default function ReschedulePage() {
                   <line x1="3" y1="10" x2="21" y2="10" />
                 </svg>
                 <span>
-                  {formatDateLong(selectedDate)} at {formatTime(selectedSlot)}
+                  {formatDateLong(selectedDate, userTimezone)} at {formatTime(selectedSlot, userTimezone)}
                 </span>
               </div>
             )}
@@ -219,11 +249,26 @@ export default function ReschedulePage() {
               selectedDate={selectedDate!}
               selectedTime={selectedSlot}
               duration={meetingInfo.duration}
+              userTimezone={userTimezone}
             />
           ) : (
             <>
               <div className="booking-picker-header">
                 <h2>Select a New Date &amp; Time</h2>
+                <div style={{ marginTop: '8px' }}>
+                  <label htmlFor="tz-select" style={{ fontSize: '12px', color: 'var(--color-text-secondary)', marginRight: '8px' }}>Timezone:</label>
+                  <select
+                    id="tz-select"
+                    className="form-input"
+                    value={userTimezone}
+                    onChange={(e) => setUserTimezone(e.target.value)}
+                    style={{ padding: '4px 8px', fontSize: '13px', width: 'auto', display: 'inline-block' }}
+                  >
+                    {TIMEZONES.map((tz) => (
+                      <option key={tz} value={tz}>{tz.replace('_', ' ')}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
               <div className="booking-picker-body">
                 <BookingCalendar
@@ -237,6 +282,7 @@ export default function ReschedulePage() {
                   selectedSlot={selectedSlot}
                   onSelect={handleSlotSelect}
                   duration={meetingInfo.duration}
+                  userTimezone={userTimezone}
                 />
               </div>
             </>
@@ -252,20 +298,22 @@ export default function ReschedulePage() {
 }
 
 /* ── Helpers ─────────────────────────────────── */
-function formatDateLong(dateStr: string) {
+function formatDateLong(dateStr: string, timeZone?: string) {
   const d = new Date(dateStr + 'T12:00:00');
   return d.toLocaleDateString('en-US', {
     weekday: 'long',
     month: 'long',
     day: 'numeric',
     year: 'numeric',
+    timeZone,
   });
 }
 
-function formatTime(iso: string) {
+function formatTime(iso: string, timeZone?: string) {
   return new Date(iso).toLocaleTimeString('en-US', {
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,
+    timeZone,
   });
 }

@@ -18,9 +18,10 @@ interface Props {
     meetAddress?: string | null;
     meetPhone?: string | null;
   };
+  userTimezone: string;
 }
 
-export default function BookingConfirmation({ event, meeting }: Props) {
+export default function BookingConfirmation({ event, meeting, userTimezone }: Props) {
   const start = new Date(meeting.startTime);
   const end = new Date(meeting.endTime);
 
@@ -29,16 +30,19 @@ export default function BookingConfirmation({ event, meeting }: Props) {
     month: 'long',
     day: 'numeric',
     year: 'numeric',
+    timeZone: userTimezone,
   });
   const timeStr = start.toLocaleTimeString('en-US', {
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,
+    timeZone: userTimezone,
   });
   const endStr = end.toLocaleTimeString('en-US', {
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,
+    timeZone: userTimezone,
   });
 
   // Google Calendar link
@@ -103,7 +107,7 @@ export default function BookingConfirmation({ event, meeting }: Props) {
             )}
             <br />
             <span style={{ fontSize: '0.9em', color: '#6b7280', marginTop: '4px', display: 'inline-block' }}>
-              {event.hostTimezone} timezone
+              {userTimezone.replace('_', ' ')} timezone
             </span>
           </span>
         </div>

@@ -9,6 +9,26 @@ import TimeSlots from '@/components/booking/TimeSlots';
 import BookingForm from '@/components/booking/BookingForm';
 import BookingConfirmation from '@/components/booking/BookingConfirmation';
 
+const TIMEZONES = [
+  'UTC',
+  'America/New_York',
+  'America/Chicago',
+  'America/Denver',
+  'America/Los_Angeles',
+  'America/Sao_Paulo',
+  'Europe/London',
+  'Europe/Paris',
+  'Europe/Berlin',
+  'Europe/Moscow',
+  'Asia/Dubai',
+  'Asia/Kolkata',
+  'Asia/Singapore',
+  'Asia/Tokyo',
+  'Asia/Shanghai',
+  'Australia/Sydney',
+  'Pacific/Auckland',
+];
+
 interface EventInfo {
   id: string;
   title: string;
@@ -61,6 +81,16 @@ export default function PublicBookingPage() {
   const [bookingResult, setBookingResult] = useState<MeetingResult | null>(null);
   const { showToast } = useToast();
   const [submitting, setSubmitting] = useState(false);
+
+  const [userTimezone, setUserTimezone] = useState<string>('UTC');
+
+  useEffect(() => {
+    try {
+      setUserTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone);
+    } catch {
+      setUserTimezone('UTC');
+    }
+  }, []);
 
   // Fetch event info
   useEffect(() => {
@@ -161,6 +191,7 @@ export default function PublicBookingPage() {
         <BookingConfirmation
           event={event}
           meeting={bookingResult.meeting}
+          userTimezone={userTimezone}
         />
       </div>
     );
@@ -210,7 +241,7 @@ export default function PublicBookingPage() {
                   <line x1="3" y1="10" x2="21" y2="10" />
                 </svg>
                 <span>
-                  {formatDateLong(selectedDate)} at {formatTime(selectedSlot)}
+                  {formatDateLong(selectedDate, userTimezone)} at {formatTime(selectedSlot, userTimezone)}
                 </span>
               </div>
             )}
@@ -228,11 +259,26 @@ export default function PublicBookingPage() {
               selectedTime={selectedSlot}
               duration={event.duration}
               meetType={event.meetType}
+              userTimezone={userTimezone}
             />
           ) : (
             <>
               <div className="booking-picker-header">
                 <h2>Select a Date &amp; Time</h2>
+                <div style={{ marginTop: '8px' }}>
+                  <label htmlFor="tz-select" style={{ fontSize: '12px', color: 'var(--color-text-secondary)', marginRight: '8px' }}>Timezone:</label>
+                  <select
+                    id="tz-select"
+                    className="form-input"
+                    value={userTimezone}
+                    onChange={(e) => setUserTimezone(e.target.value)}
+                    style={{ padding: '4px 8px', fontSize: '13px', width: 'auto', display: 'inline-block' }}
+                  >
+                    {TIMEZONES.map((tz) => (
+                      <option key={tz} value={tz}>{tz.replace('_', ' ')}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
               <div className="booking-picker-body">
                 <BookingCalendar
@@ -246,6 +292,7 @@ export default function PublicBookingPage() {
                   selectedSlot={selectedSlot}
                   onSelect={handleSlotSelect}
                   duration={event.duration}
+                  userTimezone={userTimezone}
                 />
               </div>
             </>
@@ -261,20 +308,22 @@ export default function PublicBookingPage() {
 }
 
 /* ── Helpers ─────────────────────────────────── */
-function formatDateLong(dateStr: string) {
+function formatDateLong(dateStr: string, timeZone?: string) {
   const d = new Date(dateStr + 'T12:00:00');
   return d.toLocaleDateString('en-US', {
     weekday: 'long',
     month: 'long',
     day: 'numeric',
     year: 'numeric',
+    timeZone,
   });
 }
 
-function formatTime(iso: string) {
+function formatTime(iso: string, timeZone?: string) {
   return new Date(iso).toLocaleTimeString('en-US', {
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,
+    timeZone,
   });
 }

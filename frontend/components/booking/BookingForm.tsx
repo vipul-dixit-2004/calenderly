@@ -11,6 +11,7 @@ interface Props {
   duration: number;
   meetType: string;
   meetUrl?: string | null;
+  userTimezone: string;
 }
 
 export default function BookingForm({
@@ -22,6 +23,7 @@ export default function BookingForm({
   duration,
   meetType,
   meetUrl,
+  userTimezone,
 }: Props) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -33,17 +35,20 @@ export default function BookingForm({
     month: 'long',
     day: 'numeric',
     year: 'numeric',
+    timeZone: userTimezone,
   });
   const timeLabel = new Date(selectedTime).toLocaleTimeString('en-US', {
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,
+    timeZone: userTimezone,
   });
   const endTime = new Date(new Date(selectedTime).getTime() + duration * 60000);
   const endLabel = endTime.toLocaleTimeString('en-US', {
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,
+    timeZone: userTimezone,
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -80,7 +85,7 @@ export default function BookingForm({
             <circle cx="12" cy="12" r="10" />
             <polyline points="12 6 12 12 16 14" />
           </svg>
-          <span>{timeLabel} — {endLabel} ({duration} min)</span>
+          <span>{timeLabel} - {endLabel} ({duration} min)</span>
         </div>
       </div>
 

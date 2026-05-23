@@ -9,6 +9,7 @@ interface Props {
   selectedDate: string;
   selectedTime: string;
   duration: number;
+  userTimezone: string;
 }
 
 export default function RescheduleForm({
@@ -18,6 +19,7 @@ export default function RescheduleForm({
   selectedDate,
   selectedTime,
   duration,
+  userTimezone,
 }: Props) {
   const [reason, setReason] = useState('');
 
@@ -26,17 +28,20 @@ export default function RescheduleForm({
     month: 'long',
     day: 'numeric',
     year: 'numeric',
+    timeZone: userTimezone,
   });
   const timeLabel = new Date(selectedTime).toLocaleTimeString('en-US', {
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,
+    timeZone: userTimezone,
   });
   const endTime = new Date(new Date(selectedTime).getTime() + duration * 60000);
   const endLabel = endTime.toLocaleTimeString('en-US', {
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,
+    timeZone: userTimezone,
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -70,7 +75,7 @@ export default function RescheduleForm({
             <circle cx="12" cy="12" r="10" />
             <polyline points="12 6 12 12 16 14" />
           </svg>
-          <span>{timeLabel} — {endLabel} ({duration} min)</span>
+          <span>{timeLabel} - {endLabel} ({duration} min)</span>
         </div>
       </div>
 
