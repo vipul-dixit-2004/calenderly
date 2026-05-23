@@ -1,18 +1,9 @@
-import Sidebar from '@/components/layout/Sidebar';
-import Header from '@/components/layout/Header';
+import DashboardShellWrapper from '@/components/layout/DashboardShellWrapper';
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <div className="app-shell">
-      <Sidebar />
-      <div className="app-main">
-        <Header />
-        <main className="app-content">{children}</main>
-      </div>
-    </div>
-  );
+  return <DashboardShellWrapper>{children}</DashboardShellWrapper>;
 }
