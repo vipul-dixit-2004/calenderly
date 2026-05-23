@@ -1,6 +1,6 @@
 import { db } from '../db/index.js';
 import { meetings, eventTypes, users } from '../db/schema.js';
-import { eq, and, gt, lte, or, inArray, desc } from 'drizzle-orm';
+import { eq, and, gt, lte, or, inArray, desc, asc } from 'drizzle-orm';
 import * as mailService from '../services/mail/index.js';
 
 export const list = async (req, res, next) => {
@@ -16,28 +16,28 @@ export const list = async (req, res, next) => {
       status === 'upcoming'
         ? and(gt(meetings.startTime, now), eq(meetings.status, 'scheduled'))
         : status === 'past'
-        ? or(lte(meetings.startTime, now), inArray(meetings.status, ['cancelled', 'completed']))
-        : undefined;
+          ? or(lte(meetings.startTime, now), inArray(meetings.status, ['cancelled', 'completed']))
+          : undefined;
 
     const rows = await db
       .select({
-        id:           meetings.id,
-        inviteeName:  meetings.inviteeName,
+        id: meetings.id,
+        inviteeName: meetings.inviteeName,
         inviteeEmail: meetings.inviteeEmail,
-        startTime:    meetings.startTime,
-        endTime:      meetings.endTime,
-        status:       meetings.status,
+        startTime: meetings.startTime,
+        endTime: meetings.endTime,
+        status: meetings.status,
         cancelReason: meetings.cancelReason,
-        createdAt:    meetings.createdAt,
-        eventTitle:   eventTypes.title,
-        duration:     eventTypes.duration,
-        color:        eventTypes.color,
-        slug:         eventTypes.slug,
+        createdAt: meetings.createdAt,
+        eventTitle: eventTypes.title,
+        duration: eventTypes.duration,
+        color: eventTypes.color,
+        slug: eventTypes.slug,
       })
       .from(meetings)
       .innerJoin(eventTypes, eq(eventTypes.id, meetings.eventTypeId))
       .where(statusCondition ? and(ownerCondition, statusCondition) : ownerCondition)
-      .orderBy(desc(meetings.startTime));
+      .orderBy(desc(meetings.createdAt));
 
     res.json(rows);
   } catch (err) { next(err); }
@@ -48,24 +48,24 @@ export const getOne = async (req, res, next) => {
     const userId = req.headers['x-user-id'];
     const [row] = await db
       .select({
-        id:           meetings.id,
-        inviteeName:  meetings.inviteeName,
+        id: meetings.id,
+        inviteeName: meetings.inviteeName,
         inviteeEmail: meetings.inviteeEmail,
-        startTime:    meetings.startTime,
-        endTime:      meetings.endTime,
-        status:       meetings.status,
+        startTime: meetings.startTime,
+        endTime: meetings.endTime,
+        status: meetings.status,
         cancelReason: meetings.cancelReason,
-        eventTitle:   eventTypes.title,
-        duration:     eventTypes.duration,
-        color:        eventTypes.color,
-        slug:         eventTypes.slug,
-        hostName:     users.name,
+        eventTitle: eventTypes.title,
+        duration: eventTypes.duration,
+        color: eventTypes.color,
+        slug: eventTypes.slug,
+        hostName: users.name,
       })
       .from(meetings)
       .innerJoin(eventTypes, eq(eventTypes.id, meetings.eventTypeId))
-      .innerJoin(users,      eq(users.id,       eventTypes.userId))
+      .innerJoin(users, eq(users.id, eventTypes.userId))
       .where(and(
-        eq(meetings.id,       req.params.id),
+        eq(meetings.id, req.params.id),
         eq(eventTypes.userId, userId),
       ));
 
@@ -85,7 +85,7 @@ export const cancel = async (req, res, next) => {
       .from(meetings)
       .innerJoin(eventTypes, eq(eventTypes.id, meetings.eventTypeId))
       .where(and(
-        eq(meetings.id,       req.params.id),
+        eq(meetings.id, req.params.id),
         eq(eventTypes.userId, userId),
       ));
     if (!existing) return res.status(404).json({ error: 'Not found' });
@@ -101,9 +101,9 @@ export const cancel = async (req, res, next) => {
     // Queue cancellation email
     const [meetingDetail] = await db.select({
       inviteeEmail: meetings.inviteeEmail,
-      inviteeName:  meetings.inviteeName,
-      startTime:    meetings.startTime,
-      eventTitle:   eventTypes.title,
+      inviteeName: meetings.inviteeName,
+      startTime: meetings.startTime,
+      eventTitle: eventTypes.title,
     }).from(meetings)
       .innerJoin(eventTypes, eq(eventTypes.id, meetings.eventTypeId))
       .where(eq(meetings.id, req.params.id));
@@ -114,9 +114,9 @@ export const cancel = async (req, res, next) => {
         subject: `Meeting Cancelled: ${meetingDetail.eventTitle}`,
         template: 'booking-cancelled',
         data: {
-          inviteeName:  meetingDetail.inviteeName,
-          eventTitle:   meetingDetail.eventTitle,
-          startTime:    meetingDetail.startTime,
+          inviteeName: meetingDetail.inviteeName,
+          eventTitle: meetingDetail.eventTitle,
+          startTime: meetingDetail.startTime,
           cancelReason: cancelReason || null,
         },
       }).catch(err => console.error('Failed to queue cancellation email:', err));
