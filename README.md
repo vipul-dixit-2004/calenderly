@@ -15,6 +15,7 @@
   <img src="https://img.shields.io/badge/Drizzle_ORM-PostgreSQL-C5F74F?style=flat-square" />
   <img src="https://img.shields.io/badge/TailwindCSS-3-38BDF8?style=flat-square&logo=tailwindcss" />
   <img src="https://img.shields.io/badge/Nodemailer-Gmail_SMTP-EA4335?style=flat-square&logo=gmail" />
+  <img src="https://img.shields.io/badge/Gemini_AI-Agent-4285F4?style=flat-square&logo=google" />
 </p>
 
 </div>
@@ -36,16 +37,17 @@
 
 1. [What is Calenderly?](#-what-is-calenderly)
 2. [Features](#-features)
-3. [How It Works](#-how-it-works)
-4. [Tech Stack](#-tech-stack)
-5. [Project Structure](#-project-structure)
-6. [Database Schema](#-database-schema)
-7. [API Reference](#-api-reference)
-8. [Email Notifications](#-email-notifications)
-9. [Google Meet Integration](#-google-meet-integration)
-10. [Deployment](#-deployment)
-11. [Local Setup](#-local-setup)
-12. [Environment Variables](#-environment-variables)
+3. [AI Assistant](#-ai-assistant)
+4. [How It Works](#-how-it-works)
+5. [Tech Stack](#-tech-stack)
+6. [Project Structure](#-project-structure)
+7. [Database Schema](#-database-schema)
+8. [API Reference](#-api-reference)
+9. [Email Notifications](#-email-notifications)
+10. [Google Meet Integration](#-google-meet-integration)
+11. [Deployment](#-deployment)
+12. [Local Setup](#-local-setup)
+13. [Environment Variables](#-environment-variables)
 
 ---
 
@@ -80,6 +82,14 @@ Calenderly is a **Calendly-style scheduling platform** built as a fullstack assi
 - **Reschedule Notification** — Email sent when a meeting time is updated
 - **Async Queue** — All emails are processed through an in-memory queue with automatic retries (up to 3 attempts with escalating delays)
 
+### 🤖 AI Assistant
+
+- **Conversational Interface** — Chat with a Gemini-powered scheduling assistant directly from the dashboard
+- **Schedule Q&A** — Ask natural-language questions like "What meetings do I have today?" or "Who's my next invitee?"
+- **Week Summaries** — Get a concise overview of your upcoming week or any time range
+- **Email Drafting** — Ask the assistant to send a reminder or follow-up email to an invitee; it always confirms before sending
+- **Live Data** — The agent fetches real-time data from your database using structured tools — it never guesses or fabricates meeting details
+
 ### 🎥 Google Meet Integration
 
 - **Auto-generated Meet Links** — A Google Meet link is asynchronously generated after booking using the Google Calendar API with a Service Account
@@ -90,6 +100,62 @@ Calenderly is a **Calendly-style scheduling platform** built as a fullstack assi
 - **Calendly-inspired Design** — Clean white card-based layout with blue primary CTA, matching the original product's aesthetic
 - **Responsive** — Works on mobile, tablet, and desktop with a collapsible sidebar and hamburger menu
 - **Toast Notifications** — Real-time feedback on all actions using a reusable toast component
+
+---
+
+## 🤖 AI Assistant
+
+The AI Assistant is a **multi-step agentic chat interface** powered by Google Gemini. It lives at `/assistant` in the dashboard and lets you query your schedule using plain language.
+
+### Architecture
+
+```
+User message
+     │
+     ▼
+POST /api/ai/chat  (carries conversation history)
+     │
+     ▼
+Agent Loop (backend/src/services/ai/agentLoop.js)
+  ├── Builds a system prompt scoped to the logged-in user
+  ├── Sends message + history to Gemini (gemini-3-flash-preview)
+  ├── If Gemini returns function calls → execute tools in parallel
+  │     ├── getMeetings      — fetch scheduled / past / today's meetings
+  │     ├── getEventTypes    — fetch configured event types
+  │     ├── getAvailability  — fetch weekly rules + date overrides
+  │     ├── runReadOnlyQuery — run a custom SELECT query (user-scoped)
+  │     └── sendEmail        — send an email to an invitee (confirm first)
+  ├── Feed tool results back into the chat → repeat up to MAX_STEPS (6)
+  └── Return final text reply + tool call log to frontend
+     │
+     ▼
+ChatPanel (frontend/components/ai/ChatPanel.tsx)
+  └── Renders streamed reply with markdown formatting
+```
+
+### Tools Available to the Agent
+
+| Tool | Purpose |
+|------|---------|
+| `getMeetings` | Fetch meetings filtered by `upcoming`, `past`, `today`, or `this_week` |
+| `getEventTypes` | List event types (optionally active-only) |
+| `getAvailability` | Retrieve weekly availability rules and date overrides |
+| `runReadOnlyQuery` | Execute a custom `SELECT` statement for complex aggregations |
+| `sendEmail` | Send a message to an invitee (ownership-verified; confirms before sending) |
+
+### Safety Guardrails
+
+- All SQL queries are restricted to `SELECT` only — any mutation is rejected
+- Every query is scoped to the current user's ID; cross-user data access is blocked
+- The agent always asks for confirmation before sending an email, unless explicit consent was given in the same conversation
+- Step budget is capped at **6 agentic loops** (`AI_AGENT_MAX_STEPS`) to prevent runaway chains
+
+### Example Queries
+
+> "What meetings do I have today?"  
+> "Give me a summary of this week's schedule."  
+> "How many meetings did I have last month?"  
+> "Send a quick reminder to <alice@example.com> about tomorrow's call."
 
 ---
 
@@ -169,6 +235,7 @@ existing.endTime > newStartTime
 | **DB Driver** | `@neondatabase/serverless` | Neon's HTTP driver for serverless environments |
 | **Email** | Nodemailer + Handlebars | SMTP via Gmail App Password; HTML templates |
 | **Meet Links** | Google Calendar API | Service Account OAuth2 for Meet generation |
+| **AI Agent** | Google Gemini (`gemini-2.5-flash-preview`) | Multi-step agentic chat with live tool use |
 
 ---
 
@@ -187,13 +254,15 @@ calenderly/
 │   │   │   ├── eventTypes.js
 │   │   │   ├── availability.js
 │   │   │   ├── bookings.js            # Public booking + reschedule
-│   │   │   └── meetings.js
+│   │   │   ├── meetings.js
+│   │   │   └── ai.js                  # POST /api/ai/chat
 │   │   ├── controllers/
 │   │   │   ├── userController.js
 │   │   │   ├── eventTypeController.js
 │   │   │   ├── availabilityController.js
 │   │   │   ├── bookingController.js
-│   │   │   └── meetingController.js
+│   │   │   ├── meetingController.js
+│   │   │   └── aiController.js        # chat() handler
 │   │   ├── services/
 │   │   │   ├── mail/
 │   │   │   │   ├── index.js           # send() / sendNow() public API
@@ -205,7 +274,21 @@ calenderly/
 │   │   │   │       ├── booking-confirmation.hbs
 │   │   │   │       ├── booking-cancelled.hbs
 │   │   │   │       └── meeting-reminder.hbs
-│   │   │   └── googleMeet.js          # Google Calendar API integration
+│   │   │   ├── googleMeet.js          # Google Calendar API integration
+│   │   │   └── ai/
+│   │   │       ├── index.js           # Public runAgent() entry point
+│   │   │       ├── agentLoop.js       # Multi-step Gemini agent loop
+│   │   │       ├── gemini.js          # Gemini client + model factory
+│   │   │       ├── prompts/
+│   │   │       │   └── system.js      # System prompt builder (user-scoped)
+│   │   │       └── tools/
+│   │   │           ├── schemas.js     # Gemini function declarations
+│   │   │           ├── index.js       # Tool dispatcher (runTool)
+│   │   │           ├── getMeetings.js
+│   │   │           ├── getEventTypes.js
+│   │   │           ├── getAvailability.js
+│   │   │           ├── sqlSandbox.js  # SELECT-only query executor
+│   │   │           └── sendEmail.js   # Invitee email (ownership-verified)
 │   │   ├── config/
 │   │   │   └── mail.js                # Centralised mail config
 │   │   ├── middleware/
