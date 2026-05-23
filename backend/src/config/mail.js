@@ -1,7 +1,7 @@
 export const mailConfig = {
   host: 'smtp.gmail.com',
-  port: 587,
-  secure: process.env.NODE_ENV === 'production' ? true : false,
+  port: process.env.NODE_ENV === 'production' ? 465 : 587,
+  secure: process.env.NODE_ENV === 'production',
   auth: {
     user: process.env.MAIL_USER,
     pass: process.env.MAIL_PASS,
