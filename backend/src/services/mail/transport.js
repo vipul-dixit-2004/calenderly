@@ -10,7 +10,9 @@ export function getTransporter() {
       port: mailConfig.port,
       secure: mailConfig.secure,
       auth: mailConfig.auth,
-      family: 4, // Force IPv4 to prevent ENETUNREACH on environments without IPv6 (e.g. Render)
+      family: 4,                                          // Force IPv4 — Render has no IPv6 outbound
+      connectionTimeout: mailConfig.connectionTimeout,
+      greetingTimeout: mailConfig.greetingTimeout,
     });
   }
   return transporter;
