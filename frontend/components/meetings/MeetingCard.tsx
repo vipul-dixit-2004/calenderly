@@ -38,50 +38,34 @@ export default function MeetingCard({ meeting, onCancel }: Props) {
 
   const tzName = Intl.DateTimeFormat().resolvedOptions().timeZone.replace(/_/g, ' ');
 
-  const avatarColor = meeting.color || '#4F46E5';
-  const initials = meeting.inviteeName
-    ? meeting.inviteeName.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase()
-    : '?';
+  const avatarColor = meeting.color || '#6C63FF';
 
   return (
     <>
-      <div className="mc-card max-md:gap-3 max-md:p-3.5">
+      <div className="mc-card">
         {/* Avatar */}
-        <div className="mc-avatar" style={{ background: avatarColor }}>
-          {initials}
-        </div>
+        <div className="mc-avatar" style={{ background: avatarColor }} />
 
         {/* Time block */}
-        <div className="mc-time-block max-md:min-w-full">
+        <div className="mc-time-block">
           <div className="mc-time-primary">{startShort} – {endShort}</div>
           <div className="mc-time-secondary">
-            {startLong} – {endLong} ({tzName})
+            {startLong} - {endLong} ({tzName})
           </div>
         </div>
 
-        {/* Invitee + event type */}
-        <div className="mc-invitees-block max-md:min-w-full">
-          <div className="mc-invitee-count">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-              <circle cx="12" cy="7" r="4" />
-            </svg>
-            {meeting.inviteeName}
-          </div>
+        {/* Invitees + event type */}
+        <div className="mc-invitees-block">
+          <div className="mc-invitee-count">1 Invitee</div>
           <div className="mc-event-type">
             Event type <strong>{meeting.eventTitle}</strong>
           </div>
         </div>
 
-        {/* Duration badge */}
-        <div className="mc-duration-badge">
-          {meeting.duration} min
+        {/* Host info */}
+        <div className="mc-host-info">
+          1 host&nbsp;|&nbsp;0 non-hosts
         </div>
-
-        {/* Status badge */}
-        <span className={`meeting-status meeting-status--${meeting.status}`}>
-          {meeting.status}
-        </span>
 
         {/* Details button */}
         <button
@@ -89,7 +73,7 @@ export default function MeetingCard({ meeting, onCancel }: Props) {
           onClick={() => setShowDetails(v => !v)}
         >
           <svg
-            width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"
+            width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none"
             style={{ transform: showDetails ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}
           >
             <polygon points="5,3 19,12 5,21" />
