@@ -5,7 +5,7 @@
 
 <p>
   <a href="https://calenderly.vipuldixit.tech"><img src="https://img.shields.io/badge/Frontend-Vercel-black?style=for-the-badge&logo=vercel" /></a>
-  <a href="https://calenderly-api.vipuldixit.tech"><img src="https://img.shields.io/badge/Backend-AWS?style=for-the-badge&logo=amazonwebservices" /></a>
+  <a href="https://calenderly-api.vipuldixit.tech"><img src="https://img.shields.io/badge/Backend-AWS_%2B_Nginx-FF9900?style=for-the-badge&logo=amazonwebservices" /></a>
   <a href="https://neon.tech"><img src="https://img.shields.io/badge/Database-Neon_PostgreSQL-00E599?style=for-the-badge&logo=postgresql" /></a>
 </p>
 

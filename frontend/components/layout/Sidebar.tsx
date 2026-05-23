@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
@@ -127,77 +128,73 @@ export default function Sidebar({ mobileOpen, onCloseMobile }: { mobileOpen?: bo
         <div className="md:hidden fixed inset-0 bg-black/50 z-40 transition-opacity" onClick={onCloseMobile} />
       )}
       <aside className={`sidebar ${mobileOpen ? 'max-md:!flex max-md:absolute max-md:left-0 max-md:top-0 max-md:h-full z-50' : ''}`}>
-      {/* Logo */}
-      <div className="sidebar-logo">
-        <Link href="/event-types" className="sidebar-logo-link">
-          <div className="logo-mark">
-            <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" width="28" height="28">
-              <circle cx="16" cy="16" r="16" fill="#006BFF" />
-              <path d="M10 16a6 6 0 1 1 12 0 6 6 0 0 1-12 0z" fill="white" />
-              <path d="M16 10v6l4 2" stroke="#006BFF" strokeWidth="2" strokeLinecap="round" />
+        {/* Logo */}
+        <div className="sidebar-logo">
+          <Link href="/event-types" className="sidebar-logo-link">
+            <div className="logo-mark">
+              <Image src="/logo.svg" alt="logo" width={24} height={24} />
+            </div>
+            <span className="logo-text">Calenderly</span>
+          </Link>
+        </div>
+
+        {/* Create button */}
+        <div className="sidebar-create">
+          <Link href="/event-types?create=true" className="btn-create">
+            <span className="btn-create-icon">+</span>
+            <span>Create</span>
+          </Link>
+        </div>
+
+        {/* Primary nav */}
+        <nav className="sidebar-nav">
+          {primaryNavItems.map((item) => {
+            const isActive = pathname.startsWith(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`sidebar-link ${isActive ? 'sidebar-link--active' : ''}`}
+              >
+                <span className="sidebar-link-icon">{item.icon}</span>
+                <span className="sidebar-link-label">{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Bottom nav */}
+        <div className="sidebar-bottom">
+          {bottomNavItems.map((item) => {
+            const isActive = pathname.startsWith(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`sidebar-link ${item.highlight ? 'sidebar-link--upgrade' : ''} ${isActive ? 'sidebar-link--active' : ''}`}
+              >
+                <span className="sidebar-link-icon">{item.icon}</span>
+                <span className="sidebar-link-label">{item.label}</span>
+              </Link>
+            );
+          })}
+
+          {/* Help */}
+          <button className="sidebar-link sidebar-help-btn">
+            <span className="sidebar-link-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
+            </span>
+            <span className="sidebar-link-label">Help</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginLeft: 'auto' }}>
+              <polyline points="6 9 12 15 18 9" />
             </svg>
-          </div>
-          <span className="logo-text">Calenderly</span>
-        </Link>
-      </div>
-
-      {/* Create button */}
-      <div className="sidebar-create">
-        <Link href="/event-types?create=true" className="btn-create">
-          <span className="btn-create-icon">+</span>
-          <span>Create</span>
-        </Link>
-      </div>
-
-      {/* Primary nav */}
-      <nav className="sidebar-nav">
-        {primaryNavItems.map((item) => {
-          const isActive = pathname.startsWith(item.href);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`sidebar-link ${isActive ? 'sidebar-link--active' : ''}`}
-            >
-              <span className="sidebar-link-icon">{item.icon}</span>
-              <span className="sidebar-link-label">{item.label}</span>
-            </Link>
-          );
-        })}
-      </nav>
-
-      {/* Bottom nav */}
-      <div className="sidebar-bottom">
-        {bottomNavItems.map((item) => {
-          const isActive = pathname.startsWith(item.href);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`sidebar-link ${item.highlight ? 'sidebar-link--upgrade' : ''} ${isActive ? 'sidebar-link--active' : ''}`}
-            >
-              <span className="sidebar-link-icon">{item.icon}</span>
-              <span className="sidebar-link-label">{item.label}</span>
-            </Link>
-          );
-        })}
-
-        {/* Help */}
-        <button className="sidebar-link sidebar-help-btn">
-          <span className="sidebar-link-icon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10" />
-              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-              <line x1="12" y1="17" x2="12.01" y2="17" />
-            </svg>
-          </span>
-          <span className="sidebar-link-label">Help</span>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginLeft: 'auto' }}>
-            <polyline points="6 9 12 15 18 9" />
-          </svg>
-        </button>
-      </div>
-    </aside>
+          </button>
+        </div>
+      </aside>
     </>
   );
 }
