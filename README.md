@@ -61,6 +61,8 @@ Calenderly is a **Calendly-style scheduling platform** built as a fullstack assi
 
 ### 🎯 Core Scheduling
 
+![Event Types Dashboard](./frontend/public/product/eventTypes.png)
+
 - **Event Types** — Create, edit, delete, and toggle scheduling events with custom titles, durations, colors, and URL slugs
 - **Availability Settings** — Configure weekly working hours per day with support for **multiple time slots** per day (e.g. 9–12 AM and 2–5 PM)
 - **Timezone Support** — Full timezone handling; availability is stored against the host's timezone and all booking times are displayed correctly to the viewer
@@ -69,6 +71,8 @@ Calenderly is a **Calendly-style scheduling platform** built as a fullstack assi
 - **Double-Booking Prevention** — The backend validates overlapping intervals before confirming any booking
 
 ### 📋 Meetings Management
+
+![Meetings Dashboard](./frontend/public/product/meetings.png)
 
 - **Upcoming / Past Tabs** — Dashboard view of all scheduled and completed meetings
 - **Cancel Meeting** — Host can cancel a meeting with an optional reason
@@ -106,6 +110,8 @@ Calenderly is a **Calendly-style scheduling platform** built as a fullstack assi
 ## 🤖 AI Assistant
 
 The AI Assistant is a **multi-step agentic chat interface** powered by Google Gemini. It lives at `/assistant` in the dashboard and lets you query your schedule using plain language.
+
+![AI Assistant Screen](./frontend/public/product/aiscreeen.png)
 
 ### Architecture
 
@@ -156,6 +162,10 @@ ChatPanel (frontend/components/ai/ChatPanel.tsx)
 > "Give me a summary of this week's schedule."  
 > "How many meetings did I have last month?"  
 > "Send a quick reminder to <alice@example.com> about tomorrow's call."
+
+![AI Request](./frontend/public/product/ai_request.png)
+
+![AI Response](./frontend/public/product/ai_response.png)
 
 ---
 
