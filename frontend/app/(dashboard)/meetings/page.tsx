@@ -72,7 +72,7 @@ export default function MeetingsPage() {
   };
 
   const grouped = groupByDate(meetings);
-  const dateKeys = Object.keys(grouped);
+  const dateKeys = Object.keys(grouped).sort();
   const totalCount = meetings.length;
 
   return (

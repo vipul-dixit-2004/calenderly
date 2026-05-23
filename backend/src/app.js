@@ -9,6 +9,7 @@ import eventTypeRoutes from './routes/eventTypes.js';
 import availabilityRoutes from './routes/availability.js';
 import bookingRoutes from './routes/bookings.js';
 import meetingRoutes from './routes/meetings.js';
+import aiRoutes from './routes/ai.js';
 
 const app = express();
 
@@ -20,6 +21,7 @@ app.use('/api/event-types', eventTypeRoutes);
 app.use('/api/availability', availabilityRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/meetings', meetingRoutes);
+app.use('/api/ai', aiRoutes);
 
 app.use(errorHandler);
 

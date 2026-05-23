@@ -60,3 +60,13 @@ export const getMeetingForReschedule = (id: string) =>
   apiFetch(`/bookings/reschedule/${id}`);
 export const rescheduleBooking = (id: string, body: Record<string, unknown>) =>
   apiFetch(`/bookings/reschedule/${id}`, { method: 'PATCH', body: JSON.stringify(body) });
+
+// ── AI Assistant ──
+export const aiChat = (
+  message: string,
+  history: { role: 'user' | 'model'; content: string }[],
+) =>
+  apiFetch('/ai/chat', {
+    method: 'POST',
+    body: JSON.stringify({ message, history }),
+  });
