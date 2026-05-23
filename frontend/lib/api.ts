@@ -52,8 +52,8 @@ export const getPublicEventTypes = (username: string) =>
   apiFetch(`/bookings/${username}`);
 export const getEventBySlug = (username: string, slug: string) =>
   apiFetch(`/bookings/${username}/${slug}`);
-export const getSlots = (username: string, slug: string, date: string) =>
-  apiFetch(`/bookings/${username}/${slug}/slots?date=${date}`);
+export const getSlots = (username: string, slug: string, date: string, timezone: string) =>
+  apiFetch(`/bookings/${username}/${slug}/slots?date=${date}&timezone=${encodeURIComponent(timezone)}`);
 export const createBooking = (username: string, slug: string, body: Record<string, unknown>) =>
   apiFetch(`/bookings/${username}/${slug}`, { method: 'POST', body: JSON.stringify(body) });
 export const getMeetingForReschedule = (id: string) =>

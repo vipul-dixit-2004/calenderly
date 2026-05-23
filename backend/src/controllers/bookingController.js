@@ -81,7 +81,8 @@ export const getEventBySlug = async (req, res, next) => {
 export const getAvailableSlots = async (req, res, next) => {
   try {
     const { username, slug } = req.params;
-    const { date } = req.query;   // 'YYYY-MM-DD'
+    const { date, timezone } = req.query;   // 'YYYY-MM-DD'
+    const inviteeTz = timezone || 'UTC';
     
     // 0. Fetch user by username
     const [owner] = await db.select().from(users).where(eq(users.username, username));
@@ -109,66 +110,108 @@ export const getAvailableSlots = async (req, res, next) => {
       ));
     if (!schedule) return res.json([]);
 
-    // 3. Check for date override
-    const [override] = await db
-      .select()
-      .from(availabilityOverrides)
-      .where(and(
-        eq(availabilityOverrides.scheduleId,   schedule.id),
-        eq(availabilityOverrides.overrideDate, date),
-      ));
-    if (override?.isUnavailable) return res.json([]);
+    const hostTz = schedule.timezone || owner.timezone || 'UTC';
 
-    // 4. Determine availability windows (supports multiple time slots per day)
-    let windows = [];
-    if (override && !override.isUnavailable) {
-      windows = [{ start: override.startTime, end: override.endTime }];
-    } else {
-      const dayOfWeek = new Date(date + 'T12:00:00').getDay(); // 0=Sun
-      const dayRules = await db
+    // 3. We check 3 consecutive days in the host's timezone to cover timezone offsets for the single requested invitee date
+    const refDateUTC = fromZonedTime(`${date}T12:00:00`, inviteeTz);
+    
+    const hostDateStr = new Intl.DateTimeFormat('en-CA', { 
+      timeZone: hostTz, 
+      year: 'numeric', month: '2-digit', day: '2-digit' 
+    }).format(refDateUTC);
+
+    const [hy, hm, hd] = hostDateStr.split('-').map(Number);
+    const hostDateRef = new Date(hy, hm - 1, hd);
+
+    const daysToCheck = [-1, 0, 1].map(offset => {
+      const d = new Date(hostDateRef);
+      d.setDate(d.getDate() + offset);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    });
+
+    const allSlotsUTC = [];
+
+    // 4. Generate candidate slots from all availability windows
+    for (const checkDate of daysToCheck) {
+      const [override] = await db
         .select()
-        .from(availabilityRules)
+        .from(availabilityOverrides)
         .where(and(
-          eq(availabilityRules.scheduleId, schedule.id),
-          eq(availabilityRules.dayOfWeek,  dayOfWeek),
+          eq(availabilityOverrides.scheduleId, schedule.id),
+          eq(availabilityOverrides.overrideDate, checkDate),
         ));
-      if (dayRules.length === 0) return res.json([]);
-      windows = dayRules.map(r => ({ start: r.startTime, end: r.endTime }));
-    }
 
-    // 5. Generate candidate slots from all availability windows
-    const slots = [];
-    const tz = schedule.timezone || owner.timezone || 'UTC';
-    for (const w of windows) {
-      const [sh, sm] = w.start.split(':').map(Number);
-      const [eh, em] = w.end.split(':').map(Number);
-      let current = sh * 60 + sm;
-      const end   = eh * 60 + em;
-      while (current + eventType.duration <= end) {
-        const hh = String(Math.floor(current / 60)).padStart(2, '0');
-        const mm = String(current % 60).padStart(2, '0');
-        const localDateTimeStr = `${date}T${hh}:${mm}:00`;
-        slots.push(fromZonedTime(localDateTimeStr, tz));
-        current += eventType.duration;
+      if (override?.isUnavailable) continue;
+
+      let windows = [];
+      if (override && !override.isUnavailable) {
+        windows = [{ start: override.startTime, end: override.endTime }];
+      } else {
+        const dayOfWeek = new Date(checkDate + 'T12:00:00').getDay(); // 0=Sun
+        const dayRules = await db
+          .select()
+          .from(availabilityRules)
+          .where(and(
+            eq(availabilityRules.scheduleId, schedule.id),
+            eq(availabilityRules.dayOfWeek, dayOfWeek),
+          ));
+        if (dayRules.length > 0) {
+          windows = dayRules.map(r => ({ start: r.startTime, end: r.endTime }));
+        }
+      }
+
+      for (const w of windows) {
+        const [sh, sm] = w.start.split(':').map(Number);
+        const [eh, em] = w.end.split(':').map(Number);
+        let current = sh * 60 + sm;
+        const end = eh * 60 + em;
+        while (current + eventType.duration <= end) {
+          const hh = String(Math.floor(current / 60)).padStart(2, '0');
+          const mm = String(current % 60).padStart(2, '0');
+          const localDateTimeStr = `${checkDate}T${hh}:${mm}:00`;
+          allSlotsUTC.push(fromZonedTime(localDateTimeStr, hostTz));
+          current += eventType.duration;
+        }
       }
     }
 
-    // 6. Fetch booked slots for that day
-    const dayStart = fromZonedTime(`${date}T00:00:00`, tz);
-    const dayEnd   = fromZonedTime(`${date}T23:59:59`, tz);
-    const booked   = await db
-      .select({ startTime: meetings.startTime })
+    // 5. Filter generated slots to only keep those that fall EXACTLY on the requested `date` in the invitee's timezone
+    const validSlots = allSlotsUTC.filter(slotUTC => {
+       const slotDateInInviteeTz = new Intl.DateTimeFormat('en-CA', { 
+         timeZone: inviteeTz, year: 'numeric', month: '2-digit', day: '2-digit' 
+       }).format(slotUTC);
+       return slotDateInInviteeTz === date;
+    });
+
+    if (validSlots.length === 0) return res.json([]);
+
+    // 6. Fetch booked slots that overlap with any valid slots
+    const minTime = new Date(Math.min(...validSlots.map(s => s.getTime())));
+    const maxTime = new Date(Math.max(...validSlots.map(s => s.getTime())));
+    const maxEndTime = new Date(maxTime.getTime() + eventType.duration * 60000);
+
+    const booked = await db
+      .select({ startTime: meetings.startTime, endTime: meetings.endTime })
       .from(meetings)
       .where(and(
         eq(meetings.eventTypeId, eventType.id),
-        eq(meetings.status,      'scheduled'),
-        gt(meetings.startTime,   dayStart),
-        lt(meetings.startTime,   dayEnd),
+        eq(meetings.status, 'scheduled'),
+        lt(meetings.startTime, maxEndTime),
+        gt(meetings.endTime, minTime),
       ));
-    const bookedSet = new Set(booked.map(b => b.startTime.toISOString()));
 
-    const available = slots
-      .filter(s => !bookedSet.has(s.toISOString()))
+    // Overlap check for each slot (more accurate than set matching due to duration)
+    const available = validSlots
+      .filter(slot => {
+        const slotStart = slot.getTime();
+        const slotEnd = slotStart + eventType.duration * 60000;
+        const isBooked = booked.some(b => {
+          const bStart = b.startTime.getTime();
+          const bEnd = b.endTime.getTime();
+          return slotStart < bEnd && slotEnd > bStart;
+        });
+        return !isBooked;
+      })
       .map(s => s.toISOString());
 
     res.json(available);

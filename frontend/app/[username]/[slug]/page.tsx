@@ -106,13 +106,13 @@ export default function PublicBookingPage() {
     })();
   }, [username, slug]);
 
-  // Fetch slots when date changes
-  const fetchSlots = useCallback(async (date: string) => {
+  // Fetch slots when date or timezone changes
+  const fetchSlots = useCallback(async (date: string, tz: string) => {
     setSlotsLoading(true);
     setSlots([]);
     setSelectedSlot(null);
     try {
-      const data = await getSlots(username, slug, date);
+      const data = await getSlots(username, slug, date, tz);
       setSlots(data);
     } catch {
       setSlots([]);
@@ -121,11 +121,17 @@ export default function PublicBookingPage() {
     }
   }, [username, slug]);
 
+  useEffect(() => {
+    if (selectedDate && userTimezone) {
+      fetchSlots(selectedDate, userTimezone);
+    }
+  }, [selectedDate, userTimezone, fetchSlots]);
+
   const handleDateSelect = (date: string) => {
     setSelectedDate(date);
     setStep('select');
     setSelectedSlot(null);
-    fetchSlots(date);
+    // Fetching is now handled by the useEffect above
   };
 
   const handleSlotSelect = (slot: string) => {
