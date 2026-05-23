@@ -12,7 +12,7 @@ async function seed() {
     const [user] = await db.insert(users).values({
         id: '11111111-1111-1111-1111-111111111111',
         name: 'Vipul Dixit',
-        email: 'vipul05@gmail.com',
+        email: 'dixit.vipul2004@gmail.com',
         username: 'vipul05',
         timezone: 'Asia/Kolkata',
     }).returning();

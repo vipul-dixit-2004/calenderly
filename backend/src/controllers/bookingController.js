@@ -6,6 +6,7 @@ import {
 import { eq, and, lt, gt } from 'drizzle-orm';
 import * as mailService from '../services/mail/index.js';
 import { meetQueue } from '../services/meetQueue.js';
+import { fromZonedTime } from 'date-fns-tz';
 
 // GET /bookings/:username — public profile: user info + all active event types
 export const getPublicEventTypes = async (req, res, next) => {
@@ -137,6 +138,7 @@ export const getAvailableSlots = async (req, res, next) => {
 
     // 5. Generate candidate slots from all availability windows
     const slots = [];
+    const tz = schedule.timezone || owner.timezone || 'UTC';
     for (const w of windows) {
       const [sh, sm] = w.start.split(':').map(Number);
       const [eh, em] = w.end.split(':').map(Number);
@@ -145,14 +147,15 @@ export const getAvailableSlots = async (req, res, next) => {
       while (current + eventType.duration <= end) {
         const hh = String(Math.floor(current / 60)).padStart(2, '0');
         const mm = String(current % 60).padStart(2, '0');
-        slots.push(new Date(`${date}T${hh}:${mm}:00.000Z`));
+        const localDateTimeStr = `${date}T${hh}:${mm}:00`;
+        slots.push(fromZonedTime(localDateTimeStr, tz));
         current += eventType.duration;
       }
     }
 
     // 6. Fetch booked slots for that day
-    const dayStart = new Date(`${date}T00:00:00.000Z`);
-    const dayEnd   = new Date(`${date}T23:59:59.999Z`);
+    const dayStart = fromZonedTime(`${date}T00:00:00`, tz);
+    const dayEnd   = fromZonedTime(`${date}T23:59:59`, tz);
     const booked   = await db
       .select({ startTime: meetings.startTime })
       .from(meetings)

@@ -303,14 +303,18 @@ export default function AvailabilityPage() {
   }
 
   return (
-    <>
+    <div className="meetings-page">
       {/* Page Header */}
-      <div className="page-header">
-        <div>
-          <h2 className="page-title">Availability</h2>
-          <p style={{ fontSize: 14, color: 'var(--color-text-secondary)', marginTop: 4 }}>
-            Set when you&apos;re available for meetings each week
-          </p>
+      <div className="meetings-title-row" style={{ justifyContent: 'space-between', width: '100%', marginBottom: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <h1 className="meetings-title">Availability</h1>
+          <span className="meetings-info-icon" title="Set when you're available for meetings each week">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="16" x2="12" y2="12" />
+              <line x1="12" y1="8" x2="12.01" y2="8" />
+            </svg>
+          </span>
         </div>
         <button
           id="save-availability-btn"
@@ -331,7 +335,7 @@ export default function AvailabilityPage() {
       </div>
 
       {/* Stats bar */}
-      <div className="avail-stats">
+      <div className="avail-stats" style={{ marginBottom: '24px' }}>
         <div className="avail-stat-card">
           <div className="avail-stat-num">{enabledCount}</div>
           <div className="avail-stat-label">Days available</div>
@@ -354,210 +358,207 @@ export default function AvailabilityPage() {
         )}
       </div>
 
-      {/* Section tabs */}
-      <div className="avail-tabs">
-        <button
-          id="tab-weekly"
-          className={`avail-tab ${activeSection === 'weekly' ? 'avail-tab--active' : ''}`}
-          onClick={() => setActiveSection('weekly')}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <rect x="3" y="4" width="18" height="18" rx="2" />
-            <line x1="3" y1="10" x2="21" y2="10" />
-            <line x1="8" y1="2" x2="8" y2="6" />
-            <line x1="16" y1="2" x2="16" y2="6" />
-          </svg>
-          Weekly Hours
-        </button>
-        <button
-          id="tab-settings"
-          className={`avail-tab ${activeSection === 'info' ? 'avail-tab--active' : ''}`}
-          onClick={() => setActiveSection('info')}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="12" cy="12" r="10" />
-            <polyline points="12 6 12 12 16 14" />
-          </svg>
-          Timezone &amp; Settings
-        </button>
-      </div>
-
-      {/* ── Weekly Hours Panel ── */}
-      {activeSection === 'weekly' && (
-        <div className="avail-card">
-          <div className="avail-card-header">
-            <h3 className="avail-card-title">Weekly Schedule</h3>
-            <p className="avail-card-subtitle">Toggle days on/off and set multiple time slots per day</p>
-          </div>
-
-          {/* Quick-set presets */}
-          <div className="avail-presets">
-            <span className="avail-presets-label">Quick set:</span>
+      {/* Main Card */}
+      <div className="meetings-card">
+        {/* Section tabs */}
+        <div className="meetings-tabs-bar">
+          <div className="meetings-tabs">
             <button
-              className="avail-preset-btn"
-              onClick={() =>
-                setDays((prev) =>
-                  prev.map((d) => ({
-                    ...d,
-                    enabled: d.dayOfWeek >= 1 && d.dayOfWeek <= 5,
-                    slots: [{ startTime: '09:00', endTime: '17:00' }],
-                  }))
-                )
-              }
+              id="tab-weekly"
+              className={`meetings-tab ${activeSection === 'weekly' ? 'meetings-tab--active' : ''}`}
+              onClick={() => setActiveSection('weekly')}
             >
-              Mon – Fri
+              Weekly Hours
             </button>
             <button
-              className="avail-preset-btn"
-              onClick={() =>
-                setDays((prev) =>
-                  prev.map((d) => ({
-                    ...d,
-                    enabled: d.dayOfWeek >= 1 && d.dayOfWeek <= 6,
-                    slots: [{ startTime: '09:00', endTime: '17:00' }],
-                  }))
-                )
-              }
+              id="tab-settings"
+              className={`meetings-tab ${activeSection === 'info' ? 'meetings-tab--active' : ''}`}
+              onClick={() => setActiveSection('info')}
             >
-              Mon – Sat
+              Timezone &amp; Settings
             </button>
-            <button
-              className="avail-preset-btn"
-              onClick={() =>
-                setDays((prev) =>
-                  prev.map((d) => ({
-                    ...d,
-                    enabled: true,
-                    slots: [{ startTime: '09:00', endTime: '17:00' }],
-                  }))
-                )
-              }
-            >
-              All Week
-            </button>
-            <button
-              className="avail-preset-btn avail-preset-btn--danger"
-              onClick={() =>
-                setDays((prev) =>
-                  prev.map((d) => ({ ...d, enabled: false }))
-                )
-              }
-            >
-              Clear All
-            </button>
-          </div>
-
-          {/* Day rows */}
-          <div className="avail-days">
-            {days.map((day, idx) => (
-              <DayRow
-                key={day.dayOfWeek}
-                day={day}
-                onChange={(d) => updateDay(idx, d)}
-              />
-            ))}
-          </div>
-
-          {/* Save button (bottom) */}
-          <div className="avail-card-footer">
-            <button
-              id="save-weekly-btn"
-              className="btn btn-primary"
-              onClick={handleSaveRules}
-              disabled={saving}
-            >
-              {saving ? (
-                <>
-                  <span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} />
-                  Saving…
-                </>
-              ) : (
-                'Save Weekly Schedule'
-              )}
-            </button>
-            <span className="avail-footer-note">
-              {enabledCount} of 7 days enabled · {totalSlots} time slot{totalSlots !== 1 ? 's' : ''}
-            </span>
           </div>
         </div>
-      )}
 
-      {/* ── Timezone & Settings Panel ── */}
-      {activeSection === 'info' && (
-        <div className="avail-card">
-          <div className="avail-card-header">
-            <h3 className="avail-card-title">Timezone &amp; Settings</h3>
-            <p className="avail-card-subtitle">Configure your timezone so invitees see correct local times</p>
-          </div>
+        <div className="meetings-content" style={{ padding: '24px' }}>
+          {/* ── Weekly Hours Panel ── */}
+          {activeSection === 'weekly' && (
+            <div>
+              <div className="avail-card-header" style={{ padding: '0 0 16px 0', borderBottom: 'none' }}>
+                <h3 className="avail-card-title">Weekly Schedule</h3>
+                <p className="avail-card-subtitle">Toggle days on/off and set multiple time slots per day</p>
+              </div>
 
-          <div style={{ padding: '24px 28px' }}>
-            {/* Timezone selector */}
-            <div className="form-group">
-              <label className="form-label" htmlFor="timezone-select">Your Timezone</label>
-              <div className="avail-tz-wrap">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, color: 'var(--color-text-secondary)' }}>
-                  <circle cx="12" cy="12" r="10" />
-                  <polyline points="12 6 12 12 16 14" />
-                </svg>
-                <select
-                  id="timezone-select"
-                  className="form-input avail-tz-select"
-                  value={timezone}
-                  onChange={(e) => setTimezone(e.target.value)}
+              {/* Quick-set presets */}
+              <div className="avail-presets" style={{ padding: '0 0 16px 0' }}>
+                <span className="avail-presets-label">Quick set:</span>
+                <button
+                  className="avail-preset-btn"
+                  onClick={() =>
+                    setDays((prev) =>
+                      prev.map((d) => ({
+                        ...d,
+                        enabled: d.dayOfWeek >= 1 && d.dayOfWeek <= 5,
+                        slots: [{ startTime: '09:00', endTime: '17:00' }],
+                      }))
+                    )
+                  }
                 >
-                  {TIMEZONES.map((tz) => (
-                    <option key={tz} value={tz}>{tz}</option>
-                  ))}
-                </select>
+                  Mon – Fri
+                </button>
+                <button
+                  className="avail-preset-btn"
+                  onClick={() =>
+                    setDays((prev) =>
+                      prev.map((d) => ({
+                        ...d,
+                        enabled: d.dayOfWeek >= 1 && d.dayOfWeek <= 6,
+                        slots: [{ startTime: '09:00', endTime: '17:00' }],
+                      }))
+                    )
+                  }
+                >
+                  Mon – Sat
+                </button>
+                <button
+                  className="avail-preset-btn"
+                  onClick={() =>
+                    setDays((prev) =>
+                      prev.map((d) => ({
+                        ...d,
+                        enabled: true,
+                        slots: [{ startTime: '09:00', endTime: '17:00' }],
+                      }))
+                    )
+                  }
+                >
+                  All Week
+                </button>
+                <button
+                  className="avail-preset-btn avail-preset-btn--danger"
+                  onClick={() =>
+                    setDays((prev) =>
+                      prev.map((d) => ({ ...d, enabled: false }))
+                    )
+                  }
+                >
+                  Clear All
+                </button>
               </div>
-              <p className="avail-field-hint">
-                Invitees will see available slots converted to their local timezone automatically.
-              </p>
-            </div>
 
-            {/* Schedule name (read-only info) */}
-            {schedule && (
-              <div className="form-group">
-                <label className="form-label">Schedule Name</label>
-                <div className="avail-info-row">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--color-text-secondary)', flexShrink: 0 }}>
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                    <polyline points="14 2 14 8 20 8" />
-                  </svg>
-                  <span>{schedule.name}</span>
-                  {schedule.isDefault && (
-                    <span className="avail-default-badge">Default</span>
+              {/* Day rows */}
+              <div className="avail-days" style={{ border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
+                {days.map((day, idx) => (
+                  <DayRow
+                    key={day.dayOfWeek}
+                    day={day}
+                    onChange={(d) => updateDay(idx, d)}
+                  />
+                ))}
+              </div>
+
+              {/* Save button (bottom) */}
+              <div className="avail-card-footer" style={{ background: 'transparent', padding: '20px 0 0 0', marginTop: '20px', borderTop: '1px solid var(--color-border)' }}>
+                <button
+                  id="save-weekly-btn"
+                  className="btn btn-primary"
+                  onClick={handleSaveRules}
+                  disabled={saving}
+                >
+                  {saving ? (
+                    <>
+                      <span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} />
+                      Saving…
+                    </>
+                  ) : (
+                    'Save Weekly Schedule'
                   )}
-                </div>
+                </button>
+                <span className="avail-footer-note">
+                  {enabledCount} of 7 days enabled · {totalSlots} time slot{totalSlots !== 1 ? 's' : ''}
+                </span>
               </div>
-            )}
-
-            {/* Current time preview */}
-            <div className="avail-tz-preview">
-              <div className="avail-tz-preview-label">Current time in selected timezone</div>
-              <CurrentTimeDisplay timezone={timezone} />
             </div>
+          )}
 
-            <button
-              id="save-timezone-btn"
-              className="btn btn-primary"
-              onClick={handleSaveTimezone}
-              disabled={savingTz}
-              style={{ marginTop: 8 }}
-            >
-              {savingTz ? (
-                <>
-                  <span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} />
-                  Saving…
-                </>
-              ) : (
-                'Save Timezone'
-              )}
-            </button>
-          </div>
+          {/* ── Timezone & Settings Panel ── */}
+          {activeSection === 'info' && (
+            <div>
+              <div className="avail-card-header" style={{ padding: '0 0 16px 0', borderBottom: 'none' }}>
+                <h3 className="avail-card-title">Timezone &amp; Settings</h3>
+                <p className="avail-card-subtitle">Configure your timezone so invitees see correct local times</p>
+              </div>
+
+              <div>
+                {/* Timezone selector */}
+                <div className="form-group">
+                  <label className="form-label" htmlFor="timezone-select">Your Timezone</label>
+                  <div className="avail-tz-wrap">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, color: 'var(--color-text-secondary)' }}>
+                      <circle cx="12" cy="12" r="10" />
+                      <polyline points="12 6 12 12 16 14" />
+                    </svg>
+                    <select
+                      id="timezone-select"
+                      className="form-input avail-tz-select"
+                      value={timezone}
+                      onChange={(e) => setTimezone(e.target.value)}
+                    >
+                      {TIMEZONES.map((tz) => (
+                        <option key={tz} value={tz}>{tz}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <p className="avail-field-hint">
+                    Invitees will see available slots converted to their local timezone automatically.
+                  </p>
+                </div>
+
+                {/* Schedule name (read-only info) */}
+                {schedule && (
+                  <div className="form-group">
+                    <label className="form-label">Schedule Name</label>
+                    <div className="avail-info-row">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--color-text-secondary)', flexShrink: 0 }}>
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                      </svg>
+                      <span>{schedule.name}</span>
+                      {schedule.isDefault && (
+                        <span className="avail-default-badge">Default</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Current time preview */}
+                <div className="avail-tz-preview">
+                  <div className="avail-tz-preview-label">Current time in selected timezone</div>
+                  <CurrentTimeDisplay timezone={timezone} />
+                </div>
+
+                <button
+                  id="save-timezone-btn"
+                  className="btn btn-primary"
+                  onClick={handleSaveTimezone}
+                  disabled={savingTz}
+                  style={{ marginTop: 8 }}
+                >
+                  {savingTz ? (
+                    <>
+                      <span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} />
+                      Saving…
+                    </>
+                  ) : (
+                    'Save Timezone'
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
-      )}
-    </>
+      </div>
+    </div>
   );
 }
 
