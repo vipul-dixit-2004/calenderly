@@ -82,7 +82,7 @@ const primaryNavItems = [
   // },
 ];
 
-const bottomNavItems = [
+const bottomNavItems: any[] = [
   // {
   //   label: 'Upgrade plan',
   //   href: '/upgrade',
