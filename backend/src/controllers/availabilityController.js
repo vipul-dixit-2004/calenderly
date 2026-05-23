@@ -11,7 +11,7 @@ const getDefaultSchedule = (userId) =>
   db.select()
     .from(availabilitySchedules)
     .where(and(
-      eq(availabilitySchedules.userId,    userId),
+      eq(availabilitySchedules.userId, userId),
       eq(availabilitySchedules.isDefault, true),
     ))
     .limit(1)
@@ -53,9 +53,9 @@ export const upsertRules = async (req, res, next) => {
       .insert(availabilityRules)
       .values(rules.map(r => ({
         scheduleId: schedule.id,
-        dayOfWeek:  r.dayOfWeek,
-        startTime:  r.startTime,
-        endTime:    r.endTime,
+        dayOfWeek: r.dayOfWeek,
+        startTime: r.startTime,
+        endTime: r.endTime,
       })))
       .returning();
 
@@ -107,7 +107,7 @@ export const addOverride = async (req, res, next) => {
       .values({ scheduleId: schedule.id, overrideDate, isUnavailable, startTime, endTime })
       .onConflictDoUpdate({
         target: [availabilityOverrides.scheduleId, availabilityOverrides.overrideDate],
-        set:    { isUnavailable, startTime, endTime },
+        set: { isUnavailable, startTime, endTime },
       })
       .returning();
     res.status(201).json(row);
