@@ -1,0 +1,36 @@
+name: Deploy Backend to AWS EC2
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/**' # Only trigger if changes happen in the backend folder
+  workflow_dispatch: # Allows manual trigger from GitHub Actions tab
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Execute remote SSH commands to deploy
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            # Navigate to the backend directory
+            cd calenderly/backend
+            
+            # Pull the latest code from GitHub
+            git pull origin main
+            
+            # Install any new dependencies
+            npm install
+            
+            # Restart the PM2 process (or start it if it isn't running)
+            pm2 restart calenderly-api || pm2 start src/app.js --name calenderly-api
