@@ -96,14 +96,14 @@ export default function ReschedulePage() {
     setSlots([]);
     setSelectedSlot(null);
     try {
-      const data = await getSlots(meetingInfo.hostUsername, meetingInfo.slug, date);
+      const data = await getSlots(meetingInfo.hostUsername, meetingInfo.slug, date, userTimezone);
       setSlots(data);
     } catch {
       setSlots([]);
     } finally {
       setSlotsLoading(false);
     }
-  }, [meetingInfo]);
+  }, [meetingInfo, userTimezone]);
 
   const handleDateSelect = (date: string) => {
     setSelectedDate(date);
