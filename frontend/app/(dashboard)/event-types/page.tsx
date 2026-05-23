@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, Suspense } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import {
   getEventTypes, createEventType, deleteEventType,
   toggleEventType, getMe, updateEventType,
@@ -26,7 +27,9 @@ interface User {
   name: string;
 }
 
-export default function EventTypesPage() {
+function EventTypesContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [events, setEvents] = useState<EventType[]>([]);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -50,6 +53,13 @@ export default function EventTypesPage() {
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  useEffect(() => {
+    if (searchParams.get('create') === 'true') {
+      setShowForm(true);
+      router.replace('/event-types');
+    }
+  }, [searchParams, router]);
 
   const handleCreate = async (data: any) => {
     await createEventType(data);
@@ -275,5 +285,17 @@ export default function EventTypesPage() {
         </div>
       )}
     </>
+  );
+}
+
+export default function EventTypesPage() {
+  return (
+    <Suspense fallback={
+      <div className="page-loading">
+        <span className="spinner" />
+      </div>
+    }>
+      <EventTypesContent />
+    </Suspense>
   );
 }

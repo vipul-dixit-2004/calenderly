@@ -218,7 +218,7 @@ export default function ReschedulePage() {
                 <strong>Former Time</strong>
               </p>
               <p style={{ fontSize: 14, color: 'var(--color-text)', textDecoration: 'line-through' }}>
-                {formatDateLong(meetingInfo.startTime.split('T')[0], userTimezone)} <br/>
+                {formatDateLong(meetingInfo.startTime.split('T')[0], userTimezone)} <br />
                 {formatTime(meetingInfo.startTime, userTimezone)}
               </p>
             </div>
