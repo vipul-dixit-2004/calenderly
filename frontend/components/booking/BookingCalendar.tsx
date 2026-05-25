@@ -48,7 +48,7 @@ export default function BookingCalendar({ selectedDate, onSelectDate }: Props) {
 
   const isPast = (day: number) => {
     const d = new Date(viewYear, viewMonth, day);
-    return d < today;
+    return d <= today;
   };
 
   const isToday = (day: number) => {

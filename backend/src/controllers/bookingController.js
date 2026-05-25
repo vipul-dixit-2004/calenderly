@@ -84,6 +84,15 @@ export const getAvailableSlots = async (req, res, next) => {
     const { date, timezone } = req.query;   // 'YYYY-MM-DD'
     const inviteeTz = timezone || 'UTC';
     
+    // Prevent same-day bookings
+    const todayInviteeTz = new Intl.DateTimeFormat('en-CA', { 
+      timeZone: inviteeTz, year: 'numeric', month: '2-digit', day: '2-digit' 
+    }).format(new Date());
+
+    if (date <= todayInviteeTz) {
+      return res.json([]);
+    }
+    
     // 0. Fetch user by username
     const [owner] = await db.select().from(users).where(eq(users.username, username));
     if (!owner) return res.status(404).json({ error: 'User not found' });
@@ -240,6 +249,19 @@ export const createBooking = async (req, res, next) => {
 
     const startDt = new Date(startTime);
     const endDt   = new Date(startDt.getTime() + eventType.duration * 60000);
+
+    // Prevent same-day bookings
+    const hostTz = owner.timezone || 'UTC';
+    const nowHostTz = new Intl.DateTimeFormat('en-CA', {
+      timeZone: hostTz, year: 'numeric', month: '2-digit', day: '2-digit'
+    }).format(new Date());
+    const startDtHostTz = new Intl.DateTimeFormat('en-CA', {
+      timeZone: hostTz, year: 'numeric', month: '2-digit', day: '2-digit'
+    }).format(startDt);
+
+    if (startDtHostTz <= nowHostTz) {
+      return res.status(400).json({ error: 'Cannot book appointments for the same day or past dates' });
+    }
 
     // Double-booking check: overlapping interval query
     const conflicts = await db
