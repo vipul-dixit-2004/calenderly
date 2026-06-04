@@ -17,24 +17,24 @@ export const getPublicEventTypes = async (req, res, next) => {
 
     const events = await db
       .select({
-        id:          eventTypes.id,
-        title:       eventTypes.title,
-        slug:        eventTypes.slug,
-        duration:    eventTypes.duration,
+        id: eventTypes.id,
+        title: eventTypes.title,
+        slug: eventTypes.slug,
+        duration: eventTypes.duration,
         description: eventTypes.description,
-        meetType:    eventTypes.meetType,
-        color:       eventTypes.color,
+        meetType: eventTypes.meetType,
+        color: eventTypes.color,
       })
       .from(eventTypes)
       .where(and(
-        eq(eventTypes.userId,   owner.id),
+        eq(eventTypes.userId, owner.id),
         eq(eventTypes.isActive, true),
       ))
       .orderBy(eventTypes.createdAt);
 
     res.json({
       user: {
-        name:     owner.name,
+        name: owner.name,
         username: owner.username,
         timezone: owner.timezone,
       },
@@ -46,7 +46,7 @@ export const getPublicEventTypes = async (req, res, next) => {
 export const getEventBySlug = async (req, res, next) => {
   try {
     const { username, slug } = req.params;
-    
+
     // First find the user by username
     const [owner] = await db.select().from(users).where(eq(users.username, username));
     if (!owner) return res.status(404).json({ error: 'User not found' });
@@ -55,21 +55,21 @@ export const getEventBySlug = async (req, res, next) => {
     // Join event type with its owner's details
     const [row] = await db
       .select({
-        id:           eventTypes.id,
-        title:        eventTypes.title,
-        slug:         eventTypes.slug,
-        duration:     eventTypes.duration,
-        description:  eventTypes.description,
-        meetType:     eventTypes.meetType,
-        color:        eventTypes.color,
-        hostName:     users.name,
+        id: eventTypes.id,
+        title: eventTypes.title,
+        slug: eventTypes.slug,
+        duration: eventTypes.duration,
+        description: eventTypes.description,
+        meetType: eventTypes.meetType,
+        color: eventTypes.color,
+        hostName: users.name,
         hostTimezone: users.timezone,
       })
       .from(eventTypes)
       .innerJoin(users, eq(users.id, eventTypes.userId))
       .where(and(
-        eq(eventTypes.slug,     slug),
-        eq(eventTypes.userId,   ownerId),
+        eq(eventTypes.slug, slug),
+        eq(eventTypes.userId, ownerId),
         eq(eventTypes.isActive, true),
       ));
 
@@ -83,16 +83,16 @@ export const getAvailableSlots = async (req, res, next) => {
     const { username, slug } = req.params;
     const { date, timezone } = req.query;   // 'YYYY-MM-DD'
     const inviteeTz = timezone || 'UTC';
-    
+
     // Prevent same-day bookings
-    const todayInviteeTz = new Intl.DateTimeFormat('en-CA', { 
-      timeZone: inviteeTz, year: 'numeric', month: '2-digit', day: '2-digit' 
+    const todayInviteeTz = new Intl.DateTimeFormat('en-CA', {
+      timeZone: inviteeTz, year: 'numeric', month: '2-digit', day: '2-digit'
     }).format(new Date());
 
     if (date <= todayInviteeTz) {
       return res.json([]);
     }
-    
+
     // 0. Fetch user by username
     const [owner] = await db.select().from(users).where(eq(users.username, username));
     if (!owner) return res.status(404).json({ error: 'User not found' });
@@ -103,8 +103,8 @@ export const getAvailableSlots = async (req, res, next) => {
       .select()
       .from(eventTypes)
       .where(and(
-        eq(eventTypes.slug,     slug),
-        eq(eventTypes.userId,   ownerId),
+        eq(eventTypes.slug, slug),
+        eq(eventTypes.userId, ownerId),
         eq(eventTypes.isActive, true),
       ));
     if (!eventType) return res.status(404).json({ error: 'Event not found' });
@@ -114,7 +114,7 @@ export const getAvailableSlots = async (req, res, next) => {
       .select()
       .from(availabilitySchedules)
       .where(and(
-        eq(availabilitySchedules.userId,    ownerId),
+        eq(availabilitySchedules.userId, ownerId),
         eq(availabilitySchedules.isDefault, true),
       ));
     if (!schedule) return res.json([]);
@@ -123,10 +123,10 @@ export const getAvailableSlots = async (req, res, next) => {
 
     // 3. We check 3 consecutive days in the host's timezone to cover timezone offsets for the single requested invitee date
     const refDateUTC = fromZonedTime(`${date}T12:00:00`, inviteeTz);
-    
-    const hostDateStr = new Intl.DateTimeFormat('en-CA', { 
-      timeZone: hostTz, 
-      year: 'numeric', month: '2-digit', day: '2-digit' 
+
+    const hostDateStr = new Intl.DateTimeFormat('en-CA', {
+      timeZone: hostTz,
+      year: 'numeric', month: '2-digit', day: '2-digit'
     }).format(refDateUTC);
 
     const [hy, hm, hd] = hostDateStr.split('-').map(Number);
@@ -169,6 +169,7 @@ export const getAvailableSlots = async (req, res, next) => {
         }
       }
 
+
       for (const w of windows) {
         const [sh, sm] = w.start.split(':').map(Number);
         const [eh, em] = w.end.split(':').map(Number);
@@ -179,25 +180,27 @@ export const getAvailableSlots = async (req, res, next) => {
           const mm = String(current % 60).padStart(2, '0');
           const localDateTimeStr = `${checkDate}T${hh}:${mm}:00`;
           allSlotsUTC.push(fromZonedTime(localDateTimeStr, hostTz));
-          current += eventType.duration;
+          current += eventType.duration + (eventType.bufferEnd || 0);
         }
       }
     }
 
     // 5. Filter generated slots to only keep those that fall EXACTLY on the requested `date` in the invitee's timezone
     const validSlots = allSlotsUTC.filter(slotUTC => {
-       const slotDateInInviteeTz = new Intl.DateTimeFormat('en-CA', { 
-         timeZone: inviteeTz, year: 'numeric', month: '2-digit', day: '2-digit' 
-       }).format(slotUTC);
-       return slotDateInInviteeTz === date;
+      const slotDateInInviteeTz = new Intl.DateTimeFormat('en-CA', {
+        timeZone: inviteeTz, year: 'numeric', month: '2-digit', day: '2-digit'
+      }).format(slotUTC);
+      return slotDateInInviteeTz === date;
     });
 
     if (validSlots.length === 0) return res.json([]);
 
     // 6. Fetch booked slots that overlap with any valid slots
-    const minTime = new Date(Math.min(...validSlots.map(s => s.getTime())));
+    const bufferStartMs = (eventType.bufferStart || 0) * 60000;
+    const bufferEndMs = (eventType.bufferEnd || 0) * 60000;
+    const minTime = new Date(Math.min(...validSlots.map(s => s.getTime())) - bufferEndMs);
     const maxTime = new Date(Math.max(...validSlots.map(s => s.getTime())));
-    const maxEndTime = new Date(maxTime.getTime() + eventType.duration * 60000);
+    const maxEndTime = new Date(maxTime.getTime() + eventType.duration * 60000 + bufferStartMs);
 
     const booked = await db
       .select({ startTime: meetings.startTime, endTime: meetings.endTime })
@@ -217,7 +220,10 @@ export const getAvailableSlots = async (req, res, next) => {
         const isBooked = booked.some(b => {
           const bStart = b.startTime.getTime();
           const bEnd = b.endTime.getTime();
-          return slotStart < bEnd && slotEnd > bStart;
+          // Slot's buffer zone: [slotStart - bufferStart, slotEnd + bufferEnd]
+          // Booking's occupied zone: [bStart, bEnd]
+          // They conflict if the booking falls inside the slot's buffered window or vice versa
+          return slotStart < (bEnd + bufferEndMs) && slotEnd > (bStart - bufferStartMs);
         });
         return !isBooked;
       })
@@ -241,14 +247,14 @@ export const createBooking = async (req, res, next) => {
       .select()
       .from(eventTypes)
       .where(and(
-        eq(eventTypes.slug,     slug),
-        eq(eventTypes.userId,   ownerId),
+        eq(eventTypes.slug, slug),
+        eq(eventTypes.userId, ownerId),
         eq(eventTypes.isActive, true),
       ));
     if (!eventType) return res.status(404).json({ error: 'Event not found' });
 
     const startDt = new Date(startTime);
-    const endDt   = new Date(startDt.getTime() + eventType.duration * 60000);
+    const endDt = new Date(startDt.getTime() + eventType.duration * 60000);
 
     // Prevent same-day bookings
     const hostTz = owner.timezone || 'UTC';
@@ -263,15 +269,17 @@ export const createBooking = async (req, res, next) => {
       return res.status(400).json({ error: 'Cannot book appointments for the same day or past dates' });
     }
 
-    // Double-booking check: overlapping interval query
+    // Double-booking check: overlapping interval query (buffer-aware)
+    const bufferStartMs = (eventType.bufferStart || 0) * 60000;
+    const bufferEndMs = (eventType.bufferEnd || 0) * 60000;
     const conflicts = await db
       .select({ id: meetings.id })
       .from(meetings)
       .where(and(
         eq(meetings.eventTypeId, eventType.id),
-        eq(meetings.status,      'scheduled'),
-        lt(meetings.startTime,   endDt),
-        gt(meetings.endTime,     startDt),
+        eq(meetings.status, 'scheduled'),
+        lt(meetings.startTime, new Date(endDt.getTime() + bufferEndMs)),
+        gt(meetings.endTime, new Date(startDt.getTime() - bufferStartMs)),
       ));
     if (conflicts.length > 0)
       return res.status(409).json({ error: 'Time slot is already booked' });
@@ -279,14 +287,14 @@ export const createBooking = async (req, res, next) => {
     const [meeting] = await db
       .insert(meetings)
       .values({
-        eventTypeId:  eventType.id,
+        eventTypeId: eventType.id,
         inviteeName,
         inviteeEmail,
-        startTime:    startDt,
-        endTime:      endDt,
-        meetUrl:      null, // will be populated async for google_meet
-        meetAddress:  eventType.meetType === 'offline' ? meetAddress : null,
-        meetPhone:    eventType.meetType === 'phone' ? meetPhone : null,
+        startTime: startDt,
+        endTime: endDt,
+        meetUrl: null, // will be populated async for google_meet
+        meetAddress: eventType.meetType === 'offline' ? meetAddress : null,
+        meetPhone: eventType.meetType === 'phone' ? meetPhone : null,
       })
       .returning();
 
@@ -399,17 +407,19 @@ export const rescheduleBooking = async (req, res, next) => {
     const startDt = new Date(startTime);
     const endDt = new Date(startDt.getTime() + row.eventType.duration * 60000);
 
-    // Double-booking check: overlapping interval query
+    // Double-booking check: overlapping interval query (buffer-aware)
+    const bufferStartMs = (row.eventType.bufferStart || 0) * 60000;
+    const bufferEndMs = (row.eventType.bufferEnd || 0) * 60000;
     const conflicts = await db
       .select({ id: meetings.id })
       .from(meetings)
       .where(and(
         eq(meetings.eventTypeId, row.eventType.id),
-        eq(meetings.status,      'scheduled'),
-        lt(meetings.startTime,   endDt),
-        gt(meetings.endTime,     startDt),
+        eq(meetings.status, 'scheduled'),
+        lt(meetings.startTime, new Date(endDt.getTime() + bufferEndMs)),
+        gt(meetings.endTime, new Date(startDt.getTime() - bufferStartMs)),
       ));
-    
+
     // Make sure we don't conflict with ourselves (though if we are just moving, the old one is us)
     const trueConflicts = conflicts.filter(c => c.id !== meetingId);
     if (trueConflicts.length > 0) {
@@ -417,7 +427,7 @@ export const rescheduleBooking = async (req, res, next) => {
     }
 
     const oldStartTime = row.meeting.startTime;
-    
+
     // Append the reschedule reason to the cancel reason for record-keeping if provided
     let newCancelReason = row.meeting.cancelReason;
     if (reason) {

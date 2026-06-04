@@ -11,6 +11,8 @@ export const users = pgTable('users', {
     name: varchar('name', { length: 100 }).notNull(),
     email: varchar('email', { length: 255 }).notNull().unique(),
     username: varchar('username', { length: 100 }).notNull().unique(),
+    passwordHash: varchar('password_hash', { length: 255 }).notNull().default(''),
+    avatarUrl: text('avatar_url'),
     timezone: varchar('timezone', { length: 100 }).notNull().default('UTC'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
@@ -24,6 +26,8 @@ export const eventTypes = pgTable('event_types', {
     slug: varchar('slug', { length: 150 }).notNull(),
     duration: integer('duration').notNull(),               // minutes
     description: text('description'),
+    bufferStart: integer('buffer_start').notNull().default(0), // minutes before meeting
+    bufferEnd: integer('buffer_end').notNull().default(0),   // minutes after meeting
     meetType: varchar('meet_type', { length: 50 }).notNull().default('google_meet'), // 'google_meet', 'offline', 'phone'
     meetUrl: text('meet_url'),  // optional pre-set Google Meet room URL
     color: varchar('color', { length: 20 }).default('#0069ff'),

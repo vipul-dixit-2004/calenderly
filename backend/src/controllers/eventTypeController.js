@@ -31,7 +31,7 @@ async function generateUniqueSlug(baseSlug, userId, excludeId = null) {
 
 export const list = async (req, res, next) => {
     try {
-        const userId = req.headers['x-user-id'];
+        const userId = req.userId;
         const rows = await db
             .select()
             .from(eventTypes)
@@ -43,7 +43,7 @@ export const list = async (req, res, next) => {
 
 export const create = async (req, res, next) => {
     try {
-        const userId = req.headers['x-user-id'];
+        const userId = req.userId;
         const { title, slug, duration, description, color, meetType, meetUrl } = req.body;
         const uniqueSlug = await generateUniqueSlug(slug, userId);
         const [row] = await db
@@ -56,7 +56,7 @@ export const create = async (req, res, next) => {
 
 export const getOne = async (req, res, next) => {
     try {
-        const userId = req.headers['x-user-id'];
+        const userId = req.userId;
         const [row] = await db
             .select()
             .from(eventTypes)
@@ -71,7 +71,7 @@ export const getOne = async (req, res, next) => {
 
 export const update = async (req, res, next) => {
     try {
-        const userId = req.headers['x-user-id'];
+        const userId = req.userId;
         const { title, slug, duration, description, color, meetType, meetUrl } = req.body;
         const uniqueSlug = await generateUniqueSlug(slug, userId, req.params.id);
         const [row] = await db
@@ -89,7 +89,7 @@ export const update = async (req, res, next) => {
 
 export const remove = async (req, res, next) => {
     try {
-        const userId = req.headers['x-user-id'];
+        const userId = req.userId;
         await db
             .delete(eventTypes)
             .where(and(
@@ -102,7 +102,7 @@ export const remove = async (req, res, next) => {
 
 export const toggle = async (req, res, next) => {
     try {
-        const userId = req.headers['x-user-id'];
+        const userId = req.userId;
         // First fetch current state, then flip it
         const [current] = await db
             .select({ isActive: eventTypes.isActive })

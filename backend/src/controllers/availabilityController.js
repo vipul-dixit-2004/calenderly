@@ -19,7 +19,7 @@ const getDefaultSchedule = (userId) =>
 
 export const getSchedule = async (req, res, next) => {
   try {
-    const userId = req.headers['x-user-id'];
+    const userId = req.userId;
     const schedule = await getDefaultSchedule(userId);
     if (!schedule) return res.status(404).json({ error: 'No schedule found' });
 
@@ -36,7 +36,7 @@ export const getSchedule = async (req, res, next) => {
 // Replace all rules for the default schedule (wrapped in a transaction)
 export const upsertRules = async (req, res, next) => {
   try {
-    const userId = req.headers['x-user-id'];
+    const userId = req.userId;
     const schedule = await getDefaultSchedule(userId);
     if (!schedule) return res.status(404).json({ error: 'No schedule found' });
 
@@ -65,7 +65,7 @@ export const upsertRules = async (req, res, next) => {
 
 export const updateTimezone = async (req, res, next) => {
   try {
-    const userId = req.headers['x-user-id'];
+    const userId = req.userId;
     const { timezone } = req.body;
     const schedule = await getDefaultSchedule(userId);
     if (!schedule) return res.status(404).json({ error: 'No schedule found' });
@@ -81,7 +81,7 @@ export const updateTimezone = async (req, res, next) => {
 
 export const listOverrides = async (req, res, next) => {
   try {
-    const userId = req.headers['x-user-id'];
+    const userId = req.userId;
     const schedule = await getDefaultSchedule(userId);
     if (!schedule) return res.json([]);
 
@@ -96,7 +96,7 @@ export const listOverrides = async (req, res, next) => {
 
 export const addOverride = async (req, res, next) => {
   try {
-    const userId = req.headers['x-user-id'];
+    const userId = req.userId;
     const { overrideDate, isUnavailable, startTime, endTime } = req.body;
     const schedule = await getDefaultSchedule(userId);
     if (!schedule) return res.status(404).json({ error: 'No schedule found' });

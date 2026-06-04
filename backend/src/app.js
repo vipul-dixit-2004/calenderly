@@ -1,8 +1,10 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import { verifyTransport } from './services/mail/index.js';
 
+import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
 import errorHandler from './middleware/errorHandler.js';
 import eventTypeRoutes from './routes/eventTypes.js';
@@ -13,9 +15,14 @@ import aiRoutes from './routes/ai.js';
 
 const app = express();
 
-app.use(cors({ origin: process.env.FRONTEND_URL || 'http://localhost:3000' }));
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  credentials: true,
+}));
+app.use(cookieParser());
 app.use(express.json());
 
+app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/event-types', eventTypeRoutes);
 app.use('/api/availability', availabilityRoutes);

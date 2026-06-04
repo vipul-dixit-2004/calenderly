@@ -5,7 +5,7 @@ import * as mailService from '../services/mail/index.js';
 
 export const list = async (req, res, next) => {
   try {
-    const userId = req.headers['x-user-id'];
+    const userId = req.userId;
     const { status = 'all' } = req.query;
     const now = new Date();
 
@@ -45,7 +45,7 @@ export const list = async (req, res, next) => {
 
 export const getOne = async (req, res, next) => {
   try {
-    const userId = req.headers['x-user-id'];
+    const userId = req.userId;
     const [row] = await db
       .select({
         id: meetings.id,
@@ -76,7 +76,7 @@ export const getOne = async (req, res, next) => {
 
 export const cancel = async (req, res, next) => {
   try {
-    const userId = req.headers['x-user-id'];
+    const userId = req.userId;
     const { cancelReason } = req.body;
 
     // Verify the meeting belongs to the user via its event type

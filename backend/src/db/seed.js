@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import bcrypt from 'bcrypt';
 import { db } from './index.js';
 import {
     users, eventTypes, availabilitySchedules,
@@ -8,12 +9,15 @@ import {
 async function seed() {
     console.log('Seeding...');
 
-    // 1. Default user
+    const passwordHash = await bcrypt.hash('password123', 12);
+
+    // 1. Default demo user
     const [user] = await db.insert(users).values({
         id: '11111111-1111-1111-1111-111111111111',
         name: 'Vipul Dixit',
         email: 'dixit.vipul2004@gmail.com',
         username: 'vipul05',
+        passwordHash,
         timezone: 'Asia/Kolkata',
     }).returning();
 
@@ -82,7 +86,7 @@ async function seed() {
         },
     ]);
 
-    console.log('Seed complete.');
+    console.log('Seed complete. Demo login: dixit.vipul2004@gmail.com / password123');
     process.exit(0);
 }
 

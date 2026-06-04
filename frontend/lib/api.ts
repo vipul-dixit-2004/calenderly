@@ -1,11 +1,10 @@
 const BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-const USER_ID = process.env.NEXT_PUBLIC_DEFAULT_USER_ID || '';
 
 async function apiFetch(path: string, options: RequestInit = {}) {
   const res = await fetch(`${BASE}${path}`, {
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
-      'x-user-id': USER_ID,
       ...(options.headers || {}),
     },
     ...options,
@@ -16,6 +15,16 @@ async function apiFetch(path: string, options: RequestInit = {}) {
   }
   return res.status === 204 ? null : res.json();
 }
+
+// ── Auth ──
+export const authSignup = (body: { name: string; email: string; username: string; password: string }) =>
+  apiFetch('/auth/signup', { method: 'POST', body: JSON.stringify(body) });
+export const authLogin = (body: { email: string; password: string }) =>
+  apiFetch('/auth/login', { method: 'POST', body: JSON.stringify(body) });
+export const authLogout = () =>
+  apiFetch('/auth/logout', { method: 'POST' });
+export const authMe = () =>
+  apiFetch('/auth/me');
 
 // ── Users ──
 export const getMe = () => apiFetch('/users/me');
@@ -47,7 +56,7 @@ export const getMeeting = (id: string) => apiFetch(`/meetings/${id}`);
 export const cancelMeeting = (id: string, reason?: string) =>
   apiFetch(`/meetings/${id}/cancel`, { method: 'PATCH', body: JSON.stringify({ cancelReason: reason }) });
 
-// ── Booking (public — no x-user-id needed) ──
+// ── Booking (public — no auth needed) ──
 export const getPublicEventTypes = (username: string) =>
   apiFetch(`/bookings/${username}`);
 export const getEventBySlug = (username: string, slug: string) =>

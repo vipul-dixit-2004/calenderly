@@ -18,6 +18,8 @@
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "@neondatabase/serverless": "^1.1.0",
+    "bcrypt": "^6.0.0",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "date-fns": "^4.3.0",
     "date-fns-tz": "^3.2.0",
@@ -26,6 +28,7 @@
     "express": "^5.2.1",
     "googleapis": "^172.0.0",
     "handlebars": "^4.7.9",
+    "jsonwebtoken": "^9.0.3",
     "nodemailer": "^8.0.7"
   },
   "devDependencies": {

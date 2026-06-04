@@ -5,8 +5,7 @@ import { runAgent } from '../services/ai/index.js';
 
 export const chat = async (req, res, next) => {
   try {
-    const userId = req.headers['x-user-id'];
-    if (!userId) return res.status(400).json({ error: 'x-user-id header required' });
+    const userId = req.userId;
 
     const { message, history = [] } = req.body;
     if (!message || typeof message !== 'string') {

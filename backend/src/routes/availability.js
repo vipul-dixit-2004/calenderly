@@ -1,7 +1,9 @@
 import { Router } from 'express';
 import * as ctrl from '../controllers/availabilityController.js';
+import { requireAuth } from '../middleware/auth.js';
 
 const router = Router();
+router.use(requireAuth);
 router.get('/',                 ctrl.getSchedule);
 router.put('/rules',            ctrl.upsertRules);
 router.put('/timezone',         ctrl.updateTimezone);
