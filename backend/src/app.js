@@ -15,40 +15,19 @@ import aiRoutes from './routes/ai.js';
 
 const app = express();
 
-const allowedOrigins = [
-  process.env.FRONTEND_URL ? process.env.FRONTEND_URL.replace(/\/$/, '') : null,
-  'http://localhost:3000',
-  'http://localhost:3001',
-  'https://calenderly.vipuldixit.tech'
-].filter(Boolean);
-
-const corsOptions = {
-  origin: (origin, callback) => {
-    // Allow requests with no origin (like server-to-server, curl, Postman) or matching domains
-    if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vipuldixit.tech') || origin.endsWith('.vercel.app')) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+app.use(cors({
+  origin: [
+    process.env.FRONTEND_URL || 'http://localhost:3000',
+    'https://calenderly.vipuldixit.tech',
+  ],
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'Cookie', 'x-user-id'],
-};
-
-app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
+}));
 app.use(cookieParser());
 app.use(express.json());
 
-// Health check / testing root routes
+// Health check
 app.get('/health', (req, res) => {
-  res.status(200).json({
-    status: 'success',
-    message: 'Calenderly API is running smoothly!',
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
-  });
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 app.use('/api/auth', authRoutes);

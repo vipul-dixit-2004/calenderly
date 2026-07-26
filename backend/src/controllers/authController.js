@@ -11,11 +11,12 @@ const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 // Helper: set JWT as HTTP-only cookie
 function setTokenCookie(res, userId) {
     const token = jwt.sign({ userId }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+    const isProd = process.env.NODE_ENV === 'production';
     res.cookie('token', token, {
         httpOnly: true,
-        sameSite: 'lax',
-        secure: process.env.NODE_ENV === 'production',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in ms
+        sameSite: isProd ? 'none' : 'lax',   // 'none' required for cross-subdomain in prod
+        secure: isProd,                       // must be true when sameSite is 'none'
+        maxAge: 7 * 24 * 60 * 60 * 1000,     // 7 days
     });
     return token;
 }
@@ -132,7 +133,12 @@ export const login = async (req, res, next) => {
 
 // POST /api/auth/logout
 export const logout = (req, res) => {
-    res.clearCookie('token', { httpOnly: true, sameSite: 'lax' });
+    const isProd = process.env.NODE_ENV === 'production';
+    res.clearCookie('token', {
+        httpOnly: true,
+        sameSite: isProd ? 'none' : 'lax',
+        secure: isProd,
+    });
     res.json({ success: true });
 };
 
