@@ -41,6 +41,16 @@ app.options('*', cors(corsOptions));
 app.use(cookieParser());
 app.use(express.json());
 
+// Health check / testing root routes
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'success',
+    message: 'Calenderly API is running smoothly!',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/event-types', eventTypeRoutes);
