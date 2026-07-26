@@ -105,7 +105,7 @@ export default function SignupPage() {
 
         <div className="auth-card-header">
           <h1 className="auth-title">Create your account</h1>
-          <p className="auth-subtitle">Get started — it&apos;s free</p>
+          <p className="auth-subtitle">Get started - it&apos;s free</p>
         </div>
 
         <form onSubmit={handleSubmit} className="auth-form" noValidate>
