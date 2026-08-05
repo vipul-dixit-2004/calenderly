@@ -13,7 +13,7 @@ export const users = pgTable('users', {
     username: varchar('username', { length: 100 }).notNull().unique(),
     passwordHash: varchar('password_hash', { length: 255 }).notNull().default(''),
     avatarUrl: text('avatar_url'),
-    timezone: varchar('timezone', { length: 100 }).notNull().default('UTC'),
+    timezone: varchar('timezone', { length: 100 }).notNull().default('Asia/Kolkata'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -45,7 +45,7 @@ export const availabilitySchedules = pgTable('availability_schedules', {
     id: uuid('id').defaultRandom().primaryKey(),
     userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
     name: varchar('name', { length: 100 }).notNull().default('Working Hours'),
-    timezone: varchar('timezone', { length: 100 }).notNull().default('UTC'),
+    timezone: varchar('timezone', { length: 100 }).notNull().default('Asia/Kolkata'),
     isDefault: boolean('is_default').notNull().default(true),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });

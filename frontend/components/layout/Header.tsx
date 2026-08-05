@@ -5,6 +5,7 @@ import { useAuth } from '@/components/auth/AuthProvider';
 import { updateMe } from '@/lib/api';
 
 const baseTimezones = [
+  'Asia/Kolkata',
   'UTC',
   'America/New_York',
   'America/Chicago',
@@ -16,7 +17,6 @@ const baseTimezones = [
   'Europe/Berlin',
   'Europe/Moscow',
   'Asia/Dubai',
-  'Asia/Kolkata',
   'Asia/Singapore',
   'Asia/Tokyo',
   'Asia/Shanghai',

@@ -5,7 +5,7 @@ import { users, availabilitySchedules, availabilityRules, eventTypes } from '../
 import { eq, or } from 'drizzle-orm';
 import { AppError } from '../errors/AppError.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'calenderly-dev-secret-change-in-prod';
+const JWT_SECRET = process.env.JWT_SECRET || 'calenderly-dev-secret';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
 // Helper: set JWT as HTTP-only cookie
@@ -28,7 +28,7 @@ function safeUser(user) {
 }
 
 // Helper: auto-setup for new users (default schedule + starter event type)
-async function setupNewUser(userId, timezone = 'UTC') {
+async function setupNewUser(userId, timezone = 'Asia/Kolkata') {
     // 1. Default availability schedule
     const [schedule] = await db.insert(availabilitySchedules).values({
         userId,
@@ -61,7 +61,8 @@ async function setupNewUser(userId, timezone = 'UTC') {
 // POST /api/auth/signup
 export const signup = async (req, res, next) => {
     try {
-        const { name, email, username, password } = req.body;
+        const { name, email, username, password, timezone } = req.body;
+        const userTimezone = (timezone && typeof timezone === 'string' && timezone.trim()) ? timezone.trim() : 'Asia/Kolkata';
 
         // Validate required fields
         if (!name?.trim() || !email?.trim() || !username?.trim() || !password) {
@@ -92,11 +93,11 @@ export const signup = async (req, res, next) => {
             email: email.toLowerCase().trim(),
             username: username.toLowerCase().trim(),
             passwordHash,
-            timezone: 'UTC',
+            timezone: userTimezone,
         }).returning();
 
         // Auto-setup default schedule and starter event type
-        await setupNewUser(user.id, 'UTC');
+        await setupNewUser(user.id, userTimezone);
 
         setTokenCookie(res, user.id);
         res.status(201).json({ user: safeUser(user) });

@@ -3,31 +3,12 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { getMeetingForReschedule, getSlots, rescheduleBooking } from '@/lib/api';
+import { TIMEZONES } from '@/lib/constants';
 import { useToast } from '@/components/ui/ToastProvider';
 import BookingCalendar from '@/components/booking/BookingCalendar';
 import TimeSlots from '@/components/booking/TimeSlots';
 import RescheduleForm from '@/components/booking/RescheduleForm';
 import Link from 'next/link';
-
-const TIMEZONES = [
-  'UTC',
-  'America/New_York',
-  'America/Chicago',
-  'America/Denver',
-  'America/Los_Angeles',
-  'America/Sao_Paulo',
-  'Europe/London',
-  'Europe/Paris',
-  'Europe/Berlin',
-  'Europe/Moscow',
-  'Asia/Dubai',
-  'Asia/Kolkata',
-  'Asia/Singapore',
-  'Asia/Tokyo',
-  'Asia/Shanghai',
-  'Australia/Sydney',
-  'Pacific/Auckland',
-];
 
 interface MeetingRescheduleInfo {
   id: string;
@@ -67,13 +48,13 @@ export default function ReschedulePage() {
   const { showToast } = useToast();
   const [submitting, setSubmitting] = useState(false);
 
-  const [userTimezone, setUserTimezone] = useState<string>('UTC');
+  const [userTimezone, setUserTimezone] = useState<string>('Asia/Kolkata');
 
   useEffect(() => {
     try {
       setUserTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone);
     } catch {
-      setUserTimezone('UTC');
+      setUserTimezone('Asia/Kolkata');
     }
   }, []);
 

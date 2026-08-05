@@ -7,6 +7,7 @@ import {
   updateTimezone,
 } from '@/lib/api';
 import { useToast } from '@/components/ui/ToastProvider';
+import { TIMEZONES } from '@/lib/constants';
 
 /* ─── Types ─────────────────────────────────────────────── */
 interface TimeSlot {
@@ -35,26 +36,6 @@ const DEFAULT_DAYS: DayConfig[] = DAYS.map((_, i) => ({
   enabled: i >= 1 && i <= 5, // Mon–Fri enabled by default
   slots: [{ startTime: '09:00', endTime: '17:00' }],
 }));
-
-const TIMEZONES = [
-  'UTC',
-  'America/New_York',
-  'America/Chicago',
-  'America/Denver',
-  'America/Los_Angeles',
-  'America/Sao_Paulo',
-  'Europe/London',
-  'Europe/Paris',
-  'Europe/Berlin',
-  'Europe/Moscow',
-  'Asia/Dubai',
-  'Asia/Kolkata',
-  'Asia/Singapore',
-  'Asia/Tokyo',
-  'Asia/Shanghai',
-  'Australia/Sydney',
-  'Pacific/Auckland',
-];
 
 function calcDuration(start: string, end: string) {
   const [sh, sm] = start.split(':').map(Number);
@@ -211,7 +192,7 @@ function DayRow({
 export default function AvailabilityPage() {
   const [schedule, setSchedule] = useState<Schedule | null>(null);
   const [days, setDays] = useState<DayConfig[]>(DEFAULT_DAYS);
-  const [timezone, setTimezone] = useState('UTC');
+  const [timezone, setTimezone] = useState('Asia/Kolkata');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savingTz, setSavingTz] = useState(false);

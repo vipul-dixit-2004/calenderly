@@ -17,7 +17,7 @@ async function apiFetch(path: string, options: RequestInit = {}) {
 }
 
 // ── Auth ──
-export const authSignup = (body: { name: string; email: string; username: string; password: string }) =>
+export const authSignup = (body: { name: string; email: string; username: string; password: string; timezone: string }) =>
   apiFetch('/auth/signup', { method: 'POST', body: JSON.stringify(body) });
 export const authLogin = (body: { email: string; password: string }) =>
   apiFetch('/auth/login', { method: 'POST', body: JSON.stringify(body) });

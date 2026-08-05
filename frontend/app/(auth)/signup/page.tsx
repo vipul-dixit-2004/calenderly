@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/components/auth/AuthProvider';
+import { TIMEZONES } from '@/lib/constants';
 
 function PasswordStrength({ password }: { password: string }) {
   const checks = [
@@ -43,6 +44,13 @@ export default function SignupPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [timezone, setTimezone] = useState(() => {
+    try {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Kolkata';
+    } catch {
+      return 'Asia/Kolkata';
+    }
+  });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -80,7 +88,7 @@ export default function SignupPage() {
 
     setLoading(true);
     try {
-      await signup(name.trim(), email.trim(), username.trim(), password);
+      await signup(name.trim(), email.trim(), username.trim(), password, timezone);
       router.push('/event-types');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Signup failed. Please try again.');
@@ -220,6 +228,27 @@ export default function SignupPage() {
               {confirmPassword && confirmPassword !== password && (
                 <span className="auth-field-error">Passwords don&apos;t match</span>
               )}
+            </div>
+          </div>
+
+          <div className="auth-field">
+            <label className="auth-label" htmlFor="timezone">Timezone</label>
+            <div className="auth-input-wrap">
+              <svg className="auth-tz-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="2" y1="12" x2="22" y2="12" />
+                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+              </svg>
+              <select
+                id="timezone"
+                className="auth-input auth-select"
+                value={timezone}
+                onChange={(e) => setTimezone(e.target.value)}
+              >
+                {TIMEZONES.map((tz) => (
+                  <option key={tz} value={tz}>{tz.replace(/_/g, ' ')}</option>
+                ))}
+              </select>
             </div>
           </div>
 
