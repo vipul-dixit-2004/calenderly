@@ -14,6 +14,7 @@
   <img src="https://img.shields.io/badge/Node.js-Express-339933?style=flat-square&logo=nodedotjs" />
   <img src="https://img.shields.io/badge/Drizzle_ORM-PostgreSQL-C5F74F?style=flat-square" />
   <img src="https://img.shields.io/badge/TailwindCSS-3-38BDF8?style=flat-square&logo=tailwindcss" />
+  <img src="https://img.shields.io/badge/Auth-JWT_%2B_bcrypt-F59E0B?style=flat-square&logo=jsonwebtokens" />
   <img src="https://img.shields.io/badge/Nodemailer-Gmail_SMTP-EA4335?style=flat-square&logo=gmail" />
   <img src="https://img.shields.io/badge/Gemini_AI-Agent-4285F4?style=flat-square&logo=google" />
 </p>
@@ -37,27 +38,38 @@
 
 1. [What is Calenderly?](#-what-is-calenderly)
 2. [Features](#-features)
-3. [AI Assistant](#-ai-assistant)
-4. [How It Works](#-how-it-works)
-5. [Tech Stack](#-tech-stack)
-6. [Project Structure](#-project-structure)
-7. [Database Schema](#-database-schema)
-8. [API Reference](#-api-reference)
-9. [Email Notifications](#-email-notifications)
-10. [Google Meet Integration](#-google-meet-integration)
-11. [Deployment](#-deployment)
-12. [Local Setup](#-local-setup)
-13. [Environment Variables](#-environment-variables)
+3. [Authentication](#-authentication)
+4. [AI Assistant](#-ai-assistant)
+5. [How It Works](#-how-it-works)
+6. [Tech Stack](#-tech-stack)
+7. [Project Structure](#-project-structure)
+8. [Database Schema](#-database-schema)
+9. [API Reference](#-api-reference)
+10. [Email Notifications](#-email-notifications)
+11. [Google Meet Integration](#-google-meet-integration)
+12. [Deployment](#-deployment)
+13. [Local Setup](#-local-setup)
+14. [Environment Variables](#-environment-variables)
 
 ---
 
 ## 🗓 What is Calenderly?
 
-Calenderly is a **Calendly-style scheduling platform** built as a fullstack assignment. It allows a host to define event types, set their weekly availability, and share a public booking link. Invitees can then pick a date and time from the host's real-time availability, submit their details, and receive an automated email confirmation — all without any authentication required on the invitee side.
+Calenderly is a **Calendly-style scheduling platform** built as a fullstack project. It allows a host to sign up, define event types, set their weekly availability, and share a public booking link. Invitees can then pick a date and time from the host's real-time availability, submit their details, and receive an automated email confirmation — all without any authentication required on the invitee side. The host dashboard is protected by JWT-based authentication using HTTP-only cookies.
 
 ---
 
 ## ✨ Features
+
+### 🔐 Authentication
+
+- **Sign Up / Log In / Log Out** — Full credential-based authentication with dedicated `/signup` and `/login` pages
+- **HTTP-only JWT Cookies** — Tokens are stored in `HttpOnly` cookies (never in `localStorage`), protecting against XSS
+- **Password Hashing** — Passwords are hashed with `bcrypt` (cost factor 12) before being stored
+- **7-day Sessions** — JWTs are valid for 7 days; the session is refreshed on every page load via `GET /api/auth/me`
+- **Protected API Routes** — All dashboard endpoints are guarded by the `requireAuth` middleware which validates the cookie token
+- **Auto-setup on Signup** — A default Mon–Fri 9–5 availability schedule and a starter "30-Minute Meeting" event type are automatically created for every new user
+- **React Auth Context** — `AuthProvider` wraps the entire app, exposing `user`, `login`, `signup`, `logout`, and `refreshUser` through a typed React context
 
 ### 🎯 Core Scheduling
 
@@ -104,6 +116,73 @@ Calenderly is a **Calendly-style scheduling platform** built as a fullstack assi
 - **Calendly-inspired Design** — Clean white card-based layout with blue primary CTA, matching the original product's aesthetic
 - **Responsive** — Works on mobile, tablet, and desktop with a collapsible sidebar and hamburger menu
 - **Toast Notifications** — Real-time feedback on all actions using a reusable toast component
+
+---
+
+## 🔐 Authentication
+
+Calenderly uses a **custom credential-based auth system** built with JWTs stored in HTTP-only cookies — no third-party auth providers required.
+
+### How It Works
+
+```
+User submits email + password
+         │
+         ▼
+POST /api/auth/login (or /signup)
+         │
+         ▼
+Backend (authController.js)
+  ├── [signup] Hash password with bcrypt (cost 12)
+  ├── [signup] Insert user into DB
+  ├── [signup] Auto-setup: default schedule (Mon–Fri 9–5) + starter event type
+  ├── [login]  Fetch user by email → bcrypt.compare(password, hash)
+  ├── Sign JWT  { userId }  →  expires in 7 days
+  └── Set HTTP-only cookie  "token"  (SameSite=None + Secure in prod)
+         │
+         ▼
+Frontend (AuthProvider.tsx)
+  ├── On mount: GET /api/auth/me → populate user context
+  ├── user, login(), signup(), logout(), refreshUser() exposed via React context
+  └── Dashboard routes redirect to /login if unauthenticated
+```
+
+### Tech Details
+
+| Aspect | Implementation |
+|--------|---------------|
+| **Token storage** | `HttpOnly` cookie — immune to XSS / `localStorage` theft |
+| **Cookie flags** | `SameSite=none; Secure` in production; `SameSite=lax` in dev |
+| **Password hashing** | `bcrypt` with cost factor **12** |
+| **JWT lifetime** | **7 days** (configurable via `JWT_EXPIRES_IN` env var) |
+| **Session check** | `GET /api/auth/me` is called on every page load from `AuthProvider` |
+| **Middleware** | `requireAuth` in [`backend/src/middleware/auth.js`](backend/src/middleware/auth.js) reads the cookie, verifies the JWT, and attaches `req.userId` |
+
+### Auth API Endpoints
+
+| Method | Endpoint | Auth Required | Description |
+|--------|----------|:---:|-------------|
+| `POST` | `/api/auth/signup` | ❌ | Register a new user; returns user + sets cookie |
+| `POST` | `/api/auth/login` | ❌ | Verify credentials; returns user + sets cookie |
+| `POST` | `/api/auth/logout` | ❌ | Clears the auth cookie |
+| `GET` | `/api/auth/me` | ✅ | Returns the currently authenticated user |
+
+### Frontend Pages
+
+| Route | Component | Description |
+|-------|-----------|-------------|
+| `/login` | `app/(auth)/login/page.tsx` | Email + password sign-in form |
+| `/signup` | `app/(auth)/signup/page.tsx` | Full registration form with timezone picker, username auto-generation, and password strength indicator |
+
+### New User Auto-Setup
+
+When a user signs up, the backend automatically provisions:
+
+1. **Default availability schedule** — "Working Hours" in the user's chosen timezone
+2. **Mon–Fri 9 AM–5 PM rules** — five `availability_rules` rows for weekdays
+3. **Starter event type** — "30-Minute Meeting" (slug: `30-min`, Google Meet)
+
+This means every new user has a fully working scheduling page at `/{username}/30-min` immediately after signup.
 
 ---
 
@@ -246,6 +325,8 @@ existing.endTime > newStartTime
 | **Email** | Nodemailer + Handlebars | SMTP via Gmail App Password; HTML templates |
 | **Meet Links** | Google Calendar API | Service Account OAuth2 for Meet generation |
 | **AI Agent** | Google Gemini (`gemini-2.5-flash-preview`) | Multi-step agentic chat with live tool use |
+| **Auth** | `jsonwebtoken` + `bcrypt` | JWT signing/verification; password hashing |
+| **Session** | HTTP-only cookies (`cookie-parser`) | Stateless sessions without `localStorage` exposure |
 
 ---
 
@@ -260,6 +341,7 @@ calenderly/
 │   │   │   ├── schema.js              # All table definitions + relations
 │   │   │   └── seed.js                # Sample data seed script
 │   │   ├── routes/
+│   │   │   ├── auth.js                # POST /signup, /login, /logout; GET /me
 │   │   │   ├── users.js
 │   │   │   ├── eventTypes.js
 │   │   │   ├── availability.js
@@ -267,6 +349,7 @@ calenderly/
 │   │   │   ├── meetings.js
 │   │   │   └── ai.js                  # POST /api/ai/chat
 │   │   ├── controllers/
+│   │   │   ├── authController.js      # signup / login / logout / me
 │   │   │   ├── userController.js
 │   │   │   ├── eventTypeController.js
 │   │   │   ├── availabilityController.js
@@ -302,6 +385,7 @@ calenderly/
 │   │   ├── config/
 │   │   │   └── mail.js                # Centralised mail config
 │   │   ├── middleware/
+│   │   │   ├── auth.js                # requireAuth — JWT cookie verification
 │   │   │   └── errorHandler.js
 │   │   └── app.js
 │   ├── drizzle.config.js
@@ -311,6 +395,10 @@ calenderly/
 └── frontend/
     ├── app/
     │   ├── layout.js
+    │   ├── (auth)/
+    │   │   ├── layout.tsx             # Auth-only layout (no sidebar)
+    │   │   ├── login/page.tsx         # Sign-in form
+    │   │   └── signup/page.tsx        # Registration form
     │   ├── (dashboard)/
     │   │   ├── event-types/page.tsx   # Event types management
     │   │   ├── availability/page.tsx  # Weekly schedule editor
@@ -319,13 +407,15 @@ calenderly/
     │       ├── page.tsx               # Public booking page
     │       └── confirmed/page.tsx     # Booking confirmation
     ├── components/
+    │   ├── auth/
+    │   │   └── AuthProvider.tsx       # React context: user, login, signup, logout
     │   ├── layout/                    # Sidebar + Header
     │   ├── event-types/               # EventTypeCard, EventTypeForm
     │   ├── booking/                   # CalendarPicker, TimeSlotList, BookingForm
     │   ├── meetings/                  # MeetingCard
     │   └── ui/                        # Toast, shared UI primitives
     ├── lib/
-    │   └── api.js                     # Typed fetch wrappers for all endpoints
+    │   └── api.ts                     # Typed fetch wrappers for all endpoints
     └── package.json
 ```
 
@@ -359,6 +449,15 @@ users
 ---
 
 ## 📡 API Reference
+
+### Authentication
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|:----:|-------------|
+| `POST` | `/api/auth/signup` | ❌ | Register new user; returns user object + sets `token` cookie |
+| `POST` | `/api/auth/login` | ❌ | Authenticate with email + password; returns user + sets `token` cookie |
+| `POST` | `/api/auth/logout` | ❌ | Clears the `token` cookie |
+| `GET` | `/api/auth/me` | ✅ | Returns the authenticated user's profile |
 
 ### Users
 
@@ -611,10 +710,7 @@ Create `frontend/.env.local`:
 
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:5000/api
-NEXT_PUBLIC_USER_ID=11111111-1111-1111-1111-111111111111
 ```
-
-> The `USER_ID` matches the seeded user. Once auth is added, this would come from the session.
 
 ### 6. Start the Frontend
 
@@ -628,10 +724,14 @@ npm run dev
 
 | URL | What you'll see |
 |-----|----------------|
+| `http://localhost:3000/signup` | Create a new account |
+| `http://localhost:3000/login` | Sign in to your account |
 | `http://localhost:3000` | Dashboard — manage event types |
 | `http://localhost:3000/availability` | Set your weekly hours |
 | `http://localhost:3000/meetings` | View upcoming & past meetings |
 | `http://localhost:3000/vipul05/quick-chat` | Public booking page (invitee view) |
+
+> The seed user credentials are: email `vipul@example.com` / password `password123` (created by `npm run db:seed`)
 
 ---
 
@@ -644,6 +744,8 @@ npm run dev
 | `PORT` | No | Server port (default: 5000) |
 | `DATABASE_URL` | **Yes** | Neon PostgreSQL connection string |
 | `FRONTEND_URL` | **Yes** | Frontend origin for CORS (e.g. `http://localhost:3000`) |
+| `JWT_SECRET` | **Yes** | Secret key for signing JWTs (use a strong random string in production) |
+| `JWT_EXPIRES_IN` | No | JWT expiry duration (default: `7d`) |
 | `MAIL_USER` | Yes* | Gmail address used to send emails |
 | `MAIL_PASS` | Yes* | Gmail App Password (16-char) |
 | `MAIL_FROM` | No | Display name + address for outbound emails |
@@ -657,7 +759,6 @@ npm run dev
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `NEXT_PUBLIC_API_URL` | **Yes** | Backend API base URL |
-| `NEXT_PUBLIC_USER_ID` | **Yes** | UUID of the logged-in user (from seed or DB) |
 
 ---
 
@@ -689,7 +790,7 @@ npm start            # Start production server
 
 | Decision | Rationale |
 |----------|-----------|
-| **No authentication** | Out of scope for the assignment; user ID is passed via header (`x-user-id`) |
+| **JWT + HTTP-only cookies** | Credential-based auth using `bcrypt` password hashing and JWTs stored in `HttpOnly` cookies; avoids `localStorage` XSS risks and any third-party auth dependency |
 | **In-memory email queue** | Avoids Redis dependency; acceptable for free-tier with low volume |
 | **Drizzle ORM** | Type-safe, lightweight, excellent Neon compatibility |
 | **Neon Serverless Driver** | Required for Neon's HTTP connection model; regular `pg` pools won't work in serverless |
@@ -699,5 +800,5 @@ npm start            # Start production server
 ---
 
 <div align="center">
-  <p>Built with ❤️ for the Scaler AI Labs Fullstack SDE Intern Assignment</p>
+  <p>Built with ❤️</p>
 </div>
