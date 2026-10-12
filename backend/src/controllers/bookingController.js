@@ -1,12 +1,40 @@
-import { db } from '../db/index.js';
+import { db, txDb } from '../db/index.js';
 import {
   users, eventTypes, availabilitySchedules,
   availabilityRules, availabilityOverrides, meetings,
 } from '../db/schema.js';
-import { eq, and, lt, gt } from 'drizzle-orm';
+import { eq, and, lt, gt, ne } from 'drizzle-orm';
 import * as mailService from '../services/mail/index.js';
 import { meetQueue } from '../services/meetQueue.js';
 import { fromZonedTime } from 'date-fns-tz';
+
+// SELECT ... FOR UPDATE on the event type row. Held until the transaction ends,
+// so only one booking/reschedule per event type can run its check + write at a time.
+async function lockEventType(tx, eventTypeId) {
+  await tx
+    .select({ id: eventTypes.id })
+    .from(eventTypes)
+    .where(eq(eventTypes.id, eventTypeId))
+    .for('update');
+}
+
+// Overlapping interval query (buffer-aware). Must run inside the locked transaction.
+async function hasConflict(tx, eventType, startDt, endDt, excludeMeetingId = null) {
+  const bufferStartMs = (eventType.bufferStart || 0) * 60000;
+  const bufferEndMs = (eventType.bufferEnd || 0) * 60000;
+  const conflicts = await tx
+    .select({ id: meetings.id })
+    .from(meetings)
+    .where(and(
+      eq(meetings.eventTypeId, eventType.id),
+      eq(meetings.status, 'scheduled'),
+      lt(meetings.startTime, new Date(endDt.getTime() + bufferEndMs)),
+      gt(meetings.endTime, new Date(startDt.getTime() - bufferStartMs)),
+      excludeMeetingId ? ne(meetings.id, excludeMeetingId) : undefined,
+    ))
+    .limit(1);
+  return conflicts.length > 0;
+}
 
 // GET /bookings/:username — public profile: user info + all active event types
 export const getPublicEventTypes = async (req, res, next) => {
@@ -269,34 +297,31 @@ export const createBooking = async (req, res, next) => {
       return res.status(400).json({ error: 'Cannot book appointments for the same day or past dates' });
     }
 
-    // Double-booking check: overlapping interval query (buffer-aware)
-    const bufferStartMs = (eventType.bufferStart || 0) * 60000;
-    const bufferEndMs = (eventType.bufferEnd || 0) * 60000;
-    const conflicts = await db
-      .select({ id: meetings.id })
-      .from(meetings)
-      .where(and(
-        eq(meetings.eventTypeId, eventType.id),
-        eq(meetings.status, 'scheduled'),
-        lt(meetings.startTime, new Date(endDt.getTime() + bufferEndMs)),
-        gt(meetings.endTime, new Date(startDt.getTime() - bufferStartMs)),
-      ));
-    if (conflicts.length > 0)
-      return res.status(409).json({ error: 'Time slot is already booked' });
+    // Pessimistic lock: lock the event type row, then check + insert in one transaction.
+    // Concurrent bookings for the same event type wait here until this one commits,
+    // so the overlap check below always sees every committed booking.
+    const meeting = await txDb.transaction(async (tx) => {
+      await lockEventType(tx, eventType.id);
 
-    const [meeting] = await db
-      .insert(meetings)
-      .values({
-        eventTypeId: eventType.id,
-        inviteeName,
-        inviteeEmail,
-        startTime: startDt,
-        endTime: endDt,
-        meetUrl: null, // will be populated async for google_meet
-        meetAddress: eventType.meetType === 'offline' ? meetAddress : null,
-        meetPhone: eventType.meetType === 'phone' ? meetPhone : null,
-      })
-      .returning();
+      if (await hasConflict(tx, eventType, startDt, endDt)) return null;
+
+      const [created] = await tx
+        .insert(meetings)
+        .values({
+          eventTypeId: eventType.id,
+          inviteeName,
+          inviteeEmail,
+          startTime: startDt,
+          endTime: endDt,
+          meetUrl: null, // will be populated async for google_meet
+          meetAddress: eventType.meetType === 'offline' ? meetAddress : null,
+          meetPhone: eventType.meetType === 'phone' ? meetPhone : null,
+        })
+        .returning();
+      return created;
+    });
+    if (!meeting)
+      return res.status(409).json({ error: 'Time slot is already booked' });
 
     res.status(201).json({ meeting, eventType });
 
@@ -407,25 +432,6 @@ export const rescheduleBooking = async (req, res, next) => {
     const startDt = new Date(startTime);
     const endDt = new Date(startDt.getTime() + row.eventType.duration * 60000);
 
-    // Double-booking check: overlapping interval query (buffer-aware)
-    const bufferStartMs = (row.eventType.bufferStart || 0) * 60000;
-    const bufferEndMs = (row.eventType.bufferEnd || 0) * 60000;
-    const conflicts = await db
-      .select({ id: meetings.id })
-      .from(meetings)
-      .where(and(
-        eq(meetings.eventTypeId, row.eventType.id),
-        eq(meetings.status, 'scheduled'),
-        lt(meetings.startTime, new Date(endDt.getTime() + bufferEndMs)),
-        gt(meetings.endTime, new Date(startDt.getTime() - bufferStartMs)),
-      ));
-
-    // Make sure we don't conflict with ourselves (though if we are just moving, the old one is us)
-    const trueConflicts = conflicts.filter(c => c.id !== meetingId);
-    if (trueConflicts.length > 0) {
-      return res.status(409).json({ error: 'Time slot is already booked' });
-    }
-
     const oldStartTime = row.meeting.startTime;
 
     // Append the reschedule reason to the cancel reason for record-keeping if provided
@@ -435,15 +441,28 @@ export const rescheduleBooking = async (req, res, next) => {
       newCancelReason = newCancelReason ? `${newCancelReason}\n${entry}` : entry;
     }
 
-    const [updatedMeeting] = await db
-      .update(meetings)
-      .set({
-        startTime: startDt,
-        endTime: endDt,
-        cancelReason: newCancelReason,
-      })
-      .where(eq(meetings.id, meetingId))
-      .returning();
+    // Pessimistic lock: same event-type row lock as createBooking, so reschedules and
+    // new bookings for this event type are serialized against each other.
+    const updatedMeeting = await txDb.transaction(async (tx) => {
+      await lockEventType(tx, row.eventType.id);
+
+      // Exclude the meeting being moved — its old slot shouldn't block the new one
+      if (await hasConflict(tx, row.eventType, startDt, endDt, meetingId)) return null;
+
+      const [updated] = await tx
+        .update(meetings)
+        .set({
+          startTime: startDt,
+          endTime: endDt,
+          cancelReason: newCancelReason,
+        })
+        .where(and(eq(meetings.id, meetingId), eq(meetings.status, 'scheduled')))
+        .returning();
+      return updated;
+    });
+    if (!updatedMeeting) {
+      return res.status(409).json({ error: 'Time slot is already booked' });
+    }
 
     res.json({ meeting: updatedMeeting });
 
