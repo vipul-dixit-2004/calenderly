@@ -43,8 +43,32 @@ export type EventType = {
   description: string | null;
   meetType: 'google_meet' | 'offline' | 'phone';
   color: string | null;
+  meetUrl: string | null;
   isActive: boolean;
 };
+
+// Body accepted by POST/PUT /event-types (backend/src/controllers/eventTypeController.js)
+export type EventTypeInput = {
+  title: string;
+  slug: string;
+  duration: number;
+  description: string;
+  color: string;
+  meetType: EventType['meetType'];
+  meetUrl: string;
+};
+
+export const createEventType = (input: EventTypeInput) =>
+  api<EventType>('/event-types', { method: 'POST', body: JSON.stringify(input) });
+
+export const updateEventType = ({ id, ...input }: EventTypeInput & { id: string }) =>
+  api<EventType>(`/event-types/${id}`, { method: 'PUT', body: JSON.stringify(input) });
+
+export const toggleEventType = (id: string) =>
+  api<EventType>(`/event-types/${id}/toggle`, { method: 'PATCH' });
+
+export const deleteEventType = (id: string) =>
+  api<void>(`/event-types/${id}`, { method: 'DELETE' });
 
 export type MeetingFilter = 'upcoming' | 'past';
 

@@ -33,6 +33,7 @@ export function AuthInput({ label, prefix, accessory, error, style, ...rest }: A
         style={[
           styles.inputRow,
           { backgroundColor: theme.backgroundElement },
+          rest.multiline && styles.inputRowMultiline,
           error ? { borderColor: DANGER } : null,
         ]}>
         {prefix && (
@@ -106,6 +107,10 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
     paddingHorizontal: Spacing.three,
     gap: Spacing.one,
+  },
+  inputRowMultiline: {
+    height: undefined,
+    alignItems: 'stretch',
   },
   input: {
     flex: 1,
