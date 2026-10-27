@@ -46,13 +46,21 @@ export type EventType = {
   isActive: boolean;
 };
 
+export type MeetingFilter = 'upcoming' | 'past';
+
 export const queries = {
-  upcomingMeetings: {
-    queryKey: ['meetings', 'upcoming'],
-    queryFn: () => api<Meeting[]>('/meetings?status=upcoming'),
-  },
+  meetings: (status: MeetingFilter) => ({
+    queryKey: ['meetings', status],
+    queryFn: () => api<Meeting[]>(`/meetings?status=${status}`),
+  }),
   eventTypes: {
     queryKey: ['event-types'],
     queryFn: () => api<EventType[]>('/event-types'),
   },
 };
+
+export const cancelMeeting = ({ id, reason }: { id: string; reason: string }) =>
+  api<Meeting>(`/meetings/${id}/cancel`, {
+    method: 'PATCH',
+    body: JSON.stringify({ cancelReason: reason.trim() || undefined }),
+  });

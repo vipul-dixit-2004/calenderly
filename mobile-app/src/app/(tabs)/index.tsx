@@ -24,9 +24,9 @@ import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth';
+import { WEB_HOST } from '@/lib/config';
 import { queries, type EventType, type Meeting } from '@/lib/query';
 
-const PUBLIC_SITE = 'calenderly.vipuldixit.tech';
 const MAX_UPCOMING = 10;
 
 const MEET_TYPE_LABELS: Record<EventType['meetType'], string> = {
@@ -62,7 +62,7 @@ function groupByDay(meetings: Meeting[]) {
 
 export default function DashboardScreen() {
   const { user, signOut } = useAuth();
-  const meetingsQuery = useQuery(queries.upcomingMeetings);
+  const meetingsQuery = useQuery(queries.meetings('upcoming'));
   const eventTypesQuery = useQuery(queries.eventTypes);
 
   const isLoading = meetingsQuery.isPending || eventTypesQuery.isPending;
@@ -239,7 +239,7 @@ function EmptyState({ username }: { username?: string }) {
         Share your booking link to get some on the calendar:
       </ThemedText>
       <ThemedText type="small" style={{ color: BRAND }}>
-        {PUBLIC_SITE}/{username}
+        {WEB_HOST}/{username}
       </ThemedText>
     </View>
   );
