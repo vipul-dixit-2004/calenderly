@@ -20,6 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BRAND } from '@/components/auth-form';
 import { formatTimeRange, MeetingCard } from '@/components/meeting-card';
 import { ThemedText } from '@/components/themed-text';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -101,11 +102,14 @@ export default function DashboardScreen() {
                 {greeting()}, {user?.name.split(' ')[0]}
               </ThemedText>
             </View>
-            <Pressable onPress={signOut} hitSlop={8}>
-              <ThemedText type="small" themeColor="textSecondary">
-                Sign out
-              </ThemedText>
-            </Pressable>
+            <View style={styles.headerActions}>
+              <ThemeToggle />
+              <Pressable onPress={signOut} hitSlop={8}>
+                <ThemedText type="small" themeColor="textSecondary">
+                  Sign out
+                </ThemedText>
+              </Pressable>
+            </View>
           </View>
 
           {isLoading ? (
@@ -278,6 +282,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
   },
   headerText: {
     flex: 1,

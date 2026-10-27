@@ -6,8 +6,10 @@ import { useColorScheme } from 'react-native';
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { queryClient } from '@/lib/query';
+import { restoreThemePreference } from '@/lib/theme-preference';
 
 SplashScreen.preventAutoHideAsync();
+restoreThemePreference();
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
