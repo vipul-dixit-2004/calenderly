@@ -285,6 +285,15 @@ A native host app in [`mobile-app/`](mobile-app/), built with **Expo SDK 58 / Re
 | **Availability** | Weekly hours with multiple slots per day, quick-set presets, timezone picker with live clock | `/availability` |
 | **Assistant** | Chat with the Gemini agent via `POST /api/ai/chat`, suggested prompts, markdown-style formatting | `/assistant` |
 
+### Screenshots
+
+<p align="center">
+  <img src="./mobile-app/assets/feat/homeScreen.webp" alt="Home Screen" width="250" />
+  <img src="./mobile-app/assets/feat/mettingScreen.webp" alt="Meetings Screen" width="250" />
+  <img src="./mobile-app/assets/feat/aiAssistantScreen.webp" alt="AI Assistant Screen" width="250" />
+</p>
+<p align="center"><em>Home · Meetings · AI Assistant</em></p>
+
 ### Mobile Tech
 
 | Concern | Choice |
