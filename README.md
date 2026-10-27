@@ -274,6 +274,21 @@ ChatPanel (frontend/components/ai/ChatPanel.tsx)
 
 A native host app in [`mobile-app/`](mobile-app/), built with **Expo SDK 58 / React Native** and **Expo Router**. It mirrors the web dashboard and talks to the same backend — no backend changes beyond Bearer-token support were needed.
 
+### Screenshots
+
+<table align="center">
+  <tr>
+    <th align="center">Home</th>
+    <th align="center">Meetings</th>
+    <th align="center">AI Assistant</th>
+  </tr>
+  <tr>
+    <td align="center"><img src="./mobile-app/assets/feat/homeScreen.webp" alt="Home Screen" width="240" /></td>
+    <td align="center"><img src="./mobile-app/assets/feat/mettingScreen.webp" alt="Meetings Screen" width="240" /></td>
+    <td align="center"><img src="./mobile-app/assets/feat/aiAssistantScreen.webp" alt="AI Assistant Screen" width="240" /></td>
+  </tr>
+</table>
+
 ### Screens
 
 | Tab / Screen | What it does | Web equivalent |
@@ -284,15 +299,6 @@ A native host app in [`mobile-app/`](mobile-app/), built with **Expo SDK 58 / Re
 | **Meetings** | Upcoming / Past, grouped by date, expandable details, cancel with reason, reschedule (opens the web reschedule page) | `/meetings` |
 | **Availability** | Weekly hours with multiple slots per day, quick-set presets, timezone picker with live clock | `/availability` |
 | **Assistant** | Chat with the Gemini agent via `POST /api/ai/chat`, suggested prompts, markdown-style formatting | `/assistant` |
-
-### Screenshots
-
-<p align="center">
-  <img src="./mobile-app/assets/feat/homeScreen.webp" alt="Home Screen" width="250" />
-  <img src="./mobile-app/assets/feat/mettingScreen.webp" alt="Meetings Screen" width="250" />
-  <img src="./mobile-app/assets/feat/aiAssistantScreen.webp" alt="AI Assistant Screen" width="250" />
-</p>
-<p align="center"><em>Home · Meetings · AI Assistant</em></p>
 
 ### Mobile Tech
 
