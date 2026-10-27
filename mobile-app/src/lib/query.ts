@@ -70,6 +70,24 @@ export const toggleEventType = (id: string) =>
 export const deleteEventType = (id: string) =>
   api<void>(`/event-types/${id}`, { method: 'DELETE' });
 
+// GET /availability (backend/src/controllers/availabilityController.js).
+// Times come from Postgres `time` columns as "HH:mm:ss".
+export type AvailabilityRule = { dayOfWeek: number; startTime: string; endTime: string };
+export type Availability = {
+  schedule: { id: string; name: string; timezone: string; isDefault: boolean };
+  rules: AvailabilityRule[];
+};
+
+// Replaces every weekly rule on the default schedule
+export const saveAvailabilityRules = (rules: AvailabilityRule[]) =>
+  api<AvailabilityRule[]>('/availability/rules', { method: 'PUT', body: JSON.stringify({ rules }) });
+
+export const saveAvailabilityTimezone = (timezone: string) =>
+  api<Availability['schedule']>('/availability/timezone', {
+    method: 'PUT',
+    body: JSON.stringify({ timezone }),
+  });
+
 export type MeetingFilter = 'upcoming' | 'past';
 
 export const queries = {
@@ -80,6 +98,10 @@ export const queries = {
   eventTypes: {
     queryKey: ['event-types'],
     queryFn: () => api<EventType[]>('/event-types'),
+  },
+  availability: {
+    queryKey: ['availability'],
+    queryFn: () => api<Availability>('/availability'),
   },
 };
 
