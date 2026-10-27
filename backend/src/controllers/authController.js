@@ -21,6 +21,11 @@ function setTokenCookie(res, userId) {
     return token;
 }
 
+// Helper: mobile clients can't use HTTP-only cookies, so they get the token in the body
+function isMobileClient(req) {
+    return req.get('X-Client') === 'mobile';
+}
+
 // Helper: strip passwordHash before returning user
 function safeUser(user) {
     const { passwordHash, ...rest } = user;
@@ -99,8 +104,8 @@ export const signup = async (req, res, next) => {
         // Auto-setup default schedule and starter event type
         await setupNewUser(user.id, userTimezone);
 
-        setTokenCookie(res, user.id);
-        res.status(201).json({ user: safeUser(user) });
+        const token = setTokenCookie(res, user.id);
+        res.status(201).json({ user: safeUser(user), ...(isMobileClient(req) && { token }) });
     } catch (err) { next(err); }
 };
 
@@ -127,12 +132,13 @@ export const login = async (req, res, next) => {
             throw new AppError('Invalid email or password', 401);
         }
 
-        setTokenCookie(res, user.id);
-        res.json({ user: safeUser(user) });
+        const token = setTokenCookie(res, user.id);
+        res.json({ user: safeUser(user), ...(isMobileClient(req) && { token }) });
     } catch (err) { next(err); }
 };
 
 // POST /api/auth/logout
+// Mobile clients log out by deleting their stored token (JWTs are stateless).
 export const logout = (req, res) => {
     const isProd = process.env.NODE_ENV === 'production';
     res.clearCookie('token', {

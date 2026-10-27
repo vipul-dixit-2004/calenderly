@@ -17,6 +17,7 @@
   <img src="https://img.shields.io/badge/Auth-JWT_%2B_bcrypt-F59E0B?style=flat-square&logo=jsonwebtokens" />
   <img src="https://img.shields.io/badge/Nodemailer-Gmail_SMTP-EA4335?style=flat-square&logo=gmail" />
   <img src="https://img.shields.io/badge/Gemini_AI-Agent-4285F4?style=flat-square&logo=google" />
+  <img src="https://img.shields.io/badge/Expo_SDK_58-React_Native-000020?style=flat-square&logo=expo" />
 </p>
 
 </div>
@@ -29,6 +30,7 @@
 |---------|-----|--------|
 | **Frontend** | <https://calenderly.vipuldixit.tech> | Vercel |
 | **Backend API** | <https://calenderly-api.vipuldixit.tech/api> | AWS EC2 + Nginx |
+| **Mobile App** | Run locally with Expo Go — see [Mobile App](#-mobile-app) | Expo (React Native) |
 
 > **Quick test:** Visit `https://calenderly.vipuldixit.tech/vipul05/quick-chat` to book a real meeting as an invitee.
 
@@ -40,22 +42,25 @@
 2. [Features](#-features)
 3. [Authentication](#-authentication)
 4. [AI Assistant](#-ai-assistant)
-5. [How It Works](#-how-it-works)
-6. [Tech Stack](#-tech-stack)
-7. [Project Structure](#-project-structure)
-8. [Database Schema](#-database-schema)
-9. [API Reference](#-api-reference)
-10. [Email Notifications](#-email-notifications)
-11. [Google Meet Integration](#-google-meet-integration)
-12. [Deployment](#-deployment)
-13. [Local Setup](#-local-setup)
-14. [Environment Variables](#-environment-variables)
+5. [Mobile App](#-mobile-app)
+6. [How It Works](#-how-it-works)
+7. [Tech Stack](#-tech-stack)
+8. [Project Structure](#-project-structure)
+9. [Database Schema](#-database-schema)
+10. [API Reference](#-api-reference)
+11. [Email Notifications](#-email-notifications)
+12. [Google Meet Integration](#-google-meet-integration)
+13. [Deployment](#-deployment)
+14. [Local Setup](#-local-setup)
+15. [Environment Variables](#-environment-variables)
 
 ---
 
 ## 🗓 What is Calenderly?
 
 Calenderly is a **Calendly-style scheduling platform** built as a fullstack project. It allows a host to sign up, define event types, set their weekly availability, and share a public booking link. Invitees can then pick a date and time from the host's real-time availability, submit their details, and receive an automated email confirmation — all without any authentication required on the invitee side. The host dashboard is protected by JWT-based authentication using HTTP-only cookies.
+
+Hosts can also manage everything from a **React Native mobile app** (Expo) — dashboard, meetings, event types, availability and the AI assistant — which talks to the same backend using Bearer-token auth.
 
 ---
 
@@ -67,7 +72,7 @@ Calenderly is a **Calendly-style scheduling platform** built as a fullstack proj
 - **HTTP-only JWT Cookies** — Tokens are stored in `HttpOnly` cookies (never in `localStorage`), protecting against XSS
 - **Password Hashing** — Passwords are hashed with `bcrypt` (cost factor 12) before being stored
 - **7-day Sessions** — JWTs are valid for 7 days; the session is refreshed on every page load via `GET /api/auth/me`
-- **Protected API Routes** — All dashboard endpoints are guarded by the `requireAuth` middleware which validates the cookie token
+- **Protected API Routes** — All dashboard endpoints are guarded by the `requireAuth` middleware, which validates the cookie token (web) or `Authorization: Bearer` token (mobile)
 - **Auto-setup on Signup** — A default Mon–Fri 9–5 availability schedule and a starter "30-Minute Meeting" event type are automatically created for every new user
 - **React Auth Context** — `AuthProvider` wraps the entire app, exposing `user`, `login`, `signup`, `logout`, and `refreshUser` through a typed React context
 
@@ -117,11 +122,19 @@ Calenderly is a **Calendly-style scheduling platform** built as a fullstack proj
 - **Responsive** — Works on mobile, tablet, and desktop with a collapsible sidebar and hamburger menu
 - **Toast Notifications** — Real-time feedback on all actions using a reusable toast component
 
+### 📱 Mobile App
+
+- **Native host app** — Expo / React Native app covering the whole host dashboard: Home, Scheduling, Meetings, Availability and AI Assistant tabs
+- **Same backend** — Uses the existing REST API; mobile clients authenticate with a Bearer token kept in the device's secure storage
+- **Dashboard** — Today / next-7-days counts, a "next meeting" card, upcoming meetings grouped by day, and event types
+- **Light / dark theme** — Follows the system theme, with a toggle that is remembered across launches
+- **Branded** — App icon and splash screen generated from the web logo
+
 ---
 
 ## 🔐 Authentication
 
-Calenderly uses a **custom credential-based auth system** built with JWTs stored in HTTP-only cookies — no third-party auth providers required.
+Calenderly uses a **custom credential-based auth system** built with JWTs — no third-party auth providers required. The web app keeps the JWT in an HTTP-only cookie; the mobile app (which can't rely on cookies) receives the same JWT in the response body and sends it back as a Bearer token.
 
 ### How It Works
 
@@ -138,34 +151,43 @@ Backend (authController.js)
   ├── [signup] Auto-setup: default schedule (Mon–Fri 9–5) + starter event type
   ├── [login]  Fetch user by email → bcrypt.compare(password, hash)
   ├── Sign JWT  { userId }  →  expires in 7 days
-  └── Set HTTP-only cookie  "token"  (SameSite=None + Secure in prod)
+  ├── Set HTTP-only cookie  "token"  (SameSite=None + Secure in prod)
+  └── If request has header  X-Client: mobile  → also return { token } in the JSON body
          │
-         ▼
-Frontend (AuthProvider.tsx)
-  ├── On mount: GET /api/auth/me → populate user context
-  ├── user, login(), signup(), logout(), refreshUser() exposed via React context
-  └── Dashboard routes redirect to /login if unauthenticated
+         ├──────────────────────────────────────────────┐
+         ▼                                              ▼
+Web (AuthProvider.tsx)                        Mobile (mobile-app/src/lib/auth.tsx)
+  ├── On mount: GET /api/auth/me                ├── Store token in expo-secure-store
+  ├── user, login(), signup(), logout(),        ├── Send  Authorization: Bearer <token>
+  │   refreshUser() via React context           ├── On launch: GET /api/auth/me to restore session
+  └── Dashboard redirects to /login             └── Any 401 → clear token, back to login screen
+
+requireAuth middleware: reads the "token" cookie, falling back to the Bearer header
 ```
 
 ### Tech Details
 
 | Aspect | Implementation |
 |--------|---------------|
-| **Token storage** | `HttpOnly` cookie — immune to XSS / `localStorage` theft |
+| **Token storage** | Web: `HttpOnly` cookie — immune to XSS / `localStorage` theft. Mobile: `expo-secure-store` (Keychain / Keystore) |
+| **Mobile opt-in** | Token is only returned in the JSON body when the request sends `X-Client: mobile`, so web responses never expose it |
 | **Cookie flags** | `SameSite=none; Secure` in production; `SameSite=lax` in dev |
 | **Password hashing** | `bcrypt` with cost factor **12** |
 | **JWT lifetime** | **7 days** (configurable via `JWT_EXPIRES_IN` env var) |
 | **Session check** | `GET /api/auth/me` is called on every page load from `AuthProvider` |
-| **Middleware** | `requireAuth` in [`backend/src/middleware/auth.js`](backend/src/middleware/auth.js) reads the cookie, verifies the JWT, and attaches `req.userId` |
+| **Middleware** | `requireAuth` in [`backend/src/middleware/auth.js`](backend/src/middleware/auth.js) reads the cookie (or, if absent, an `Authorization: Bearer` header), verifies the JWT, and attaches `req.userId` |
+| **Logout** | Web: server clears the cookie. Mobile: JWTs are stateless, so the app deletes its stored token |
 
 ### Auth API Endpoints
 
 | Method | Endpoint | Auth Required | Description |
 |--------|----------|:---:|-------------|
-| `POST` | `/api/auth/signup` | ❌ | Register a new user; returns user + sets cookie |
-| `POST` | `/api/auth/login` | ❌ | Verify credentials; returns user + sets cookie |
+| `POST` | `/api/auth/signup` | ❌ | Register a new user; returns user + sets cookie (+ `token` for mobile) |
+| `POST` | `/api/auth/login` | ❌ | Verify credentials; returns user + sets cookie (+ `token` for mobile) |
 | `POST` | `/api/auth/logout` | ❌ | Clears the auth cookie |
 | `GET` | `/api/auth/me` | ✅ | Returns the currently authenticated user |
+
+> Every protected endpoint accepts either the `token` cookie (web) or `Authorization: Bearer <token>` (mobile).
 
 ### Frontend Pages
 
@@ -248,6 +270,45 @@ ChatPanel (frontend/components/ai/ChatPanel.tsx)
 
 ---
 
+## 📱 Mobile App
+
+A native host app in [`mobile-app/`](mobile-app/), built with **Expo SDK 58 / React Native** and **Expo Router**. It mirrors the web dashboard and talks to the same backend — no backend changes beyond Bearer-token support were needed.
+
+### Screens
+
+| Tab / Screen | What it does | Web equivalent |
+|--------------|--------------|----------------|
+| **Login / Sign up** | Email + password sign-in; sign-up with username auto-fill, password strength meter and timezone picker | `/login`, `/signup` |
+| **Home** | Greeting, today / next-7-days / active-event counts, next-meeting card, upcoming meetings grouped by day, event types, light/dark toggle | — (mobile only) |
+| **Scheduling** | Search event types, enable/disable switch, copy link, native share sheet, create/edit form, delete | `/event-types` |
+| **Meetings** | Upcoming / Past, grouped by date, expandable details, cancel with reason, reschedule (opens the web reschedule page) | `/meetings` |
+| **Availability** | Weekly hours with multiple slots per day, quick-set presets, timezone picker with live clock | `/availability` |
+| **Assistant** | Chat with the Gemini agent via `POST /api/ai/chat`, suggested prompts, markdown-style formatting | `/assistant` |
+
+### Mobile Tech
+
+| Concern | Choice |
+|---------|--------|
+| Framework | Expo SDK 58, React Native, TypeScript |
+| Navigation | Expo Router — native bottom tabs, `Stack.Protected` guards for signed-in / signed-out screens |
+| Data fetching | TanStack Query — caching, pull-to-refresh, refetch on app foreground; shared queries keep tabs in sync (e.g. cancelling a meeting updates the dashboard) |
+| Auth storage | `expo-secure-store` (also stores the theme preference) |
+| Dates | `date-fns`, shown in the device's timezone |
+| Other | `expo-web-browser` (reschedule / landing page), `expo-clipboard` (copy link), `expo-symbols` (SF Symbols / Material icons) |
+
+### Behaviour Worth Knowing
+
+- **Deleting an event type deletes its meetings.** `meetings.event_type_id` cascades on delete; the mobile confirmation says so explicitly.
+- **Availability validation.** The app rejects a slot whose end isn't after its start, and overlapping slots, before saving. Days with no saved rules show as unavailable.
+- **Time picker.** Times are picked from a 15-minute list (plus 11:59 PM); existing off-grid times stay selectable.
+- **Assistant actions are real.** The agent's `sendEmail` tool sends real emails to invitees, same as on the web.
+
+### Running It
+
+See [Local Setup → step 8](#8-run-the-mobile-app). The quickest way is **Expo Go** on a physical phone — no Android Studio or Xcode needed.
+
+---
+
 ## ⚙️ How It Works
 
 ### Booking Flow (End-to-End)
@@ -327,6 +388,9 @@ existing.endTime > newStartTime
 | **AI Agent** | Google Gemini (`gemini-2.5-flash-preview`) | Multi-step agentic chat with live tool use |
 | **Auth** | `jsonwebtoken` + `bcrypt` | JWT signing/verification; password hashing |
 | **Session** | HTTP-only cookies (`cookie-parser`) | Stateless sessions without `localStorage` exposure |
+| **Mobile** | Expo SDK 58 + React Native + Expo Router | Native host app for iOS and Android |
+| **Mobile data** | TanStack Query | Caching, refetching and cache sharing between screens |
+| **Mobile auth** | Bearer JWT + `expo-secure-store` | Token stored in the OS keychain / keystore |
 
 ---
 
@@ -385,38 +449,62 @@ calenderly/
 │   │   ├── config/
 │   │   │   └── mail.js                # Centralised mail config
 │   │   ├── middleware/
-│   │   │   ├── auth.js                # requireAuth — JWT cookie verification
+│   │   │   ├── auth.js                # requireAuth — JWT from cookie or Bearer header
 │   │   │   └── errorHandler.js
 │   │   └── app.js
 │   ├── drizzle.config.js
 │   ├── .env
 │   └── package.json
 │
-└── frontend/
-    ├── app/
-    │   ├── layout.js
-    │   ├── (auth)/
-    │   │   ├── layout.tsx             # Auth-only layout (no sidebar)
-    │   │   ├── login/page.tsx         # Sign-in form
-    │   │   └── signup/page.tsx        # Registration form
-    │   ├── (dashboard)/
-    │   │   ├── event-types/page.tsx   # Event types management
-    │   │   ├── availability/page.tsx  # Weekly schedule editor
-    │   │   └── meetings/page.tsx      # Upcoming / Past meetings
-    │   └── [username]/[slug]/
-    │       ├── page.tsx               # Public booking page
-    │       └── confirmed/page.tsx     # Booking confirmation
-    ├── components/
-    │   ├── auth/
-    │   │   └── AuthProvider.tsx       # React context: user, login, signup, logout
-    │   ├── layout/                    # Sidebar + Header
-    │   ├── event-types/               # EventTypeCard, EventTypeForm
-    │   ├── booking/                   # CalendarPicker, TimeSlotList, BookingForm
-    │   ├── meetings/                  # MeetingCard
-    │   └── ui/                        # Toast, shared UI primitives
-    ├── lib/
-    │   └── api.ts                     # Typed fetch wrappers for all endpoints
-    └── package.json
+├── frontend/
+│   ├── app/
+│   │   ├── layout.js
+│   │   ├── (auth)/
+│   │   │   ├── layout.tsx             # Auth-only layout (no sidebar)
+│   │   │   ├── login/page.tsx         # Sign-in form
+│   │   │   └── signup/page.tsx        # Registration form
+│   │   ├── (dashboard)/
+│   │   │   ├── event-types/page.tsx   # Event types management
+│   │   │   ├── availability/page.tsx  # Weekly schedule editor
+│   │   │   └── meetings/page.tsx      # Upcoming / Past meetings
+│   │   └── [username]/[slug]/
+│   │       ├── page.tsx               # Public booking page
+│   │       └── confirmed/page.tsx     # Booking confirmation
+│   ├── components/
+│   │   ├── auth/
+│   │   │   └── AuthProvider.tsx       # React context: user, login, signup, logout
+│   │   ├── layout/                    # Sidebar + Header
+│   │   ├── event-types/               # EventTypeCard, EventTypeForm
+│   │   ├── booking/                   # CalendarPicker, TimeSlotList, BookingForm
+│   │   ├── meetings/                  # MeetingCard
+│   │   └── ui/                        # Toast, shared UI primitives
+│   ├── lib/
+│   │   └── api.ts                     # Typed fetch wrappers for all endpoints
+│   └── package.json
+│
+└── mobile-app/                        # Expo / React Native host app
+    ├── app.json                       # Expo config: name, icons, splash
+    ├── assets/images/                 # Icon + splash PNGs (generated from frontend/public/logo.svg)
+    └── src/
+        ├── app/                       # Expo Router routes
+        │   ├── _layout.tsx            # Providers + protected-route guards
+        │   ├── login.tsx
+        │   ├── signup.tsx
+        │   └── (tabs)/
+        │       ├── _layout.tsx        # Native bottom tabs
+        │       ├── index.tsx          # Home dashboard
+        │       ├── scheduling.tsx     # Event types
+        │       ├── meetings.tsx
+        │       ├── availability.tsx
+        │       └── assistant.tsx      # AI chat
+        ├── components/                # Meeting card, event type form, sheets, chat bubbles…
+        ├── constants/                 # Theme, tab list, timezones
+        └── lib/
+            ├── api.ts                 # fetch wrapper: Bearer token, X-Client header, errors
+            ├── auth.tsx               # AuthProvider: sign in/up/out, session restore
+            ├── query.ts               # TanStack Query client, queries, mutations, API types
+            ├── config.ts              # Web URL for booking / reschedule links
+            └── theme-preference.ts    # Saved light/dark choice
 ```
 
 ---
@@ -454,8 +542,8 @@ users
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|:----:|-------------|
-| `POST` | `/api/auth/signup` | ❌ | Register new user; returns user object + sets `token` cookie |
-| `POST` | `/api/auth/login` | ❌ | Authenticate with email + password; returns user + sets `token` cookie |
+| `POST` | `/api/auth/signup` | ❌ | Register new user; returns user object + sets `token` cookie. With `X-Client: mobile`, also returns `token` in the body |
+| `POST` | `/api/auth/login` | ❌ | Authenticate with email + password; returns user + sets `token` cookie. With `X-Client: mobile`, also returns `token` in the body |
 | `POST` | `/api/auth/logout` | ❌ | Clears the `token` cookie |
 | `GET` | `/api/auth/me` | ✅ | Returns the authenticated user's profile |
 
@@ -733,6 +821,29 @@ npm run dev
 
 > The seed user credentials are: email `vipul@example.com` / password `password123` (created by `npm run db:seed`)
 
+### 8. Run the Mobile App
+
+Install **Expo Go** on your phone (Play Store / App Store); the phone and your computer must be on the same Wi-Fi network.
+
+```bash
+cd ../mobile-app
+npm install
+```
+
+Create `mobile-app/.env.local`, pointing at your computer's **LAN IP** (a phone can't reach `localhost`):
+
+```env
+EXPO_PUBLIC_API_URL=http://192.168.x.x:5000/api
+```
+
+Then start Metro and scan the QR code with Expo Go:
+
+```bash
+npx expo start          # add -c after changing .env.local; use --tunnel on networks that block LAN traffic
+```
+
+> Don't use `npm run android` unless you have the Android SDK and an emulator set up; it launches the emulator rather than your phone. The app icon and native splash only apply in a real build (`eas build` or a development build); Expo Go shows its own icon.
+
 ---
 
 ## 🔑 Environment Variables
@@ -760,6 +871,15 @@ npm run dev
 |----------|----------|-------------|
 | `NEXT_PUBLIC_API_URL` | **Yes** | Backend API base URL |
 
+### Mobile (`mobile-app/.env.local`)
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `EXPO_PUBLIC_API_URL` | **Yes** | Backend API base URL reachable from the phone, e.g. `http://192.168.x.x:5000/api` |
+| `EXPO_PUBLIC_WEB_URL` | No | Web app used for booking links, the landing page and the reschedule flow (default: `https://calenderly.vipuldixit.tech`) |
+
+> `EXPO_PUBLIC_*` values are bundled into the app, so never put secrets in them. Restart with `npx expo start -c` after changing them.
+
 ---
 
 ## 📜 Available Scripts
@@ -784,6 +904,16 @@ npm run build        # Build for production
 npm start            # Start production server
 ```
 
+### Mobile
+
+```bash
+npx expo start       # Start Metro; scan the QR code with Expo Go
+npx expo lint        # Lint
+npx tsc --noEmit     # Typecheck
+npx expo-doctor      # Check dependency / config issues
+npx expo install <pkg>  # Add a package at the SDK-compatible version (use instead of npm install <pkg>)
+```
+
 ---
 
 ## 🏗 Architecture Decisions
@@ -796,6 +926,9 @@ npm start            # Start production server
 | **Neon Serverless Driver** | Required for Neon's HTTP connection model; regular `pg` pools won't work in serverless |
 | **Handlebars for emails** | Separates HTML from code; easily extensible with new templates |
 | **Async Google Meet generation** | Keeps booking response fast; Meet link is delivered via follow-up email |
+| **Bearer tokens for mobile, opt-in** | React Native can't rely on HTTP-only cookies; the token is only returned in the body when `X-Client: mobile` is sent, so the web keeps its cookie-only protection |
+| **Expo + Expo Go** | No native toolchain needed to develop; every dependency used is available in Expo Go |
+| **TanStack Query on mobile** | One cache shared across tabs, so a change on one screen (cancel, toggle, delete) updates the others |
 
 ---
 
