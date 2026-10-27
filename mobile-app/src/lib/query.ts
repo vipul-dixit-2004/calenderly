@@ -59,7 +59,16 @@ export const queries = {
   },
 };
 
-export const cancelMeeting = ({ id, reason }: { id: string; reason: string }) =>
+export type ChatMessage = { role: 'user' | 'model'; content: string };
+
+// POST /ai/chat runs the Gemini agent; `history` is the conversation before `message`
+export const aiChat = (message: string, history: ChatMessage[]) =>
+  api<{ reply: string }>('/ai/chat', {
+    method: 'POST',
+    body: JSON.stringify({ message, history }),
+  });
+
+export const cancelMeeting =({ id, reason }: { id: string; reason: string }) =>
   api<Meeting>(`/meetings/${id}/cancel`, {
     method: 'PATCH',
     body: JSON.stringify({ cancelReason: reason.trim() || undefined }),
